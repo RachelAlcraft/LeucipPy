@@ -87,3 +87,15 @@ def getEnghHuberStatistics(type='BackboneBondLengths'):
     df = pd.DataFrame(vals, columns=cols)
     return df
 
+def loadSimpleMatrix(filepath):
+    import numpy as np
+    with open(filepath,'r') as f:
+        ed_data = f.read().splitlines()
+    rows = len(ed_data)
+    ed_slice = np.zeros((rows,rows))
+    for i in range(0,rows):
+        row = ed_data[i].split(',')
+        for j in range(0, rows):
+            val = float(row[j])
+            ed_slice[i,j] = val
+    return ed_slice

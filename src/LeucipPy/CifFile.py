@@ -38,7 +38,10 @@ class CifFile:
                 id = self.getIdFromLine(line)
                 nam = self.getNameFromLine(line)
                 val = self.gettValueFromLine(line)
-                self.NonLoopedItems[id] = {nam:val}
+                if id in self.NonLoopedItems:
+                    self.NonLoopedItems[id].append([nam,val])
+                else:
+                    self.NonLoopedItems[id] = [[nam, val]]
             elif line[0] == '_' and on_item and on_loop:#adding headers to a loop set
                 id = self.getIdFromLine(line)
                 nam = self.getNameFromLine(line).strip()
@@ -54,6 +57,13 @@ class CifFile:
                     header = headers[i]
                     val = vals[i]
                     self.LoopedItems[item_id][header].append(val)
+
+    def getValue(self, id, name):
+        vals = self.NonLoopedItems[id]
+        for nam,val in vals:
+            if nam == name:
+                return val
+        return ""
 
     def getMinMax(self, id, x):
         col_x = [int(xx) for xx in self.LoopedItems[id][x]]
@@ -117,13 +127,9 @@ class CifFile:
     def gettValueFromLine(self,line):
         vals = line.split('.')
         rhs = vals[1]
-        vals = rhs.split(' ')
-        rhs = vals[0]
-        quotes = [pos for pos,char in enumerate(rhs) if char == "'"]
-        if len(quotes)<2:
-            rhs = rhs.strip()
-        else:
-            rhs = rhs[quotes[0]:quotes[1]]
+        pos = rhs.find(" ")
+        rhs = rhs[pos:]
+        rhs = rhs.strip()
         return rhs
 
     def getValuesFromLine(self,line):

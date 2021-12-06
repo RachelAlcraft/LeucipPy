@@ -11,6 +11,9 @@ import io
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
+from scipy.stats import gaussian_kde
+
 
 class GeoHTML:
     """Class for a single atom
@@ -65,80 +68,158 @@ class GeoHTML:
         self.HTMLIncrement()
         self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>'+comment+'</td>\n'
 
-    def addPlot2d(self,data,plottype,geo_x,geo_y,hue,title='',palette='viridis'):
-        fig,ax = plt.subplots()
-        ax.grid(b=True, which='major', color='Gainsboro', linestyle='-')
-        ax.set_axisbelow(True)
+    def addPlot2d(self,data,plottype,geo_x,geo_y,hue,title='',palette='viridis',overlay=False,alpha=1,xrange=[None,None],yrange=[None,None]):
+        self.incrementOverlay(overlay)
+        self.ax.grid(b=True, which='major', color='Gainsboro', linestyle='-')
+        self.ax.set_axisbelow(True)
+
+        count = len(data[geo_x])
+        minX,maxX = 0,0
+        minY, maxY = 0, 0
+        try:
+            minX, maxX = min(data[geo_x]), max(data[geo_x])
+            minY, maxY = min(data[geo_y]), max(data[geo_y])
+        except:
+            pass
+        if xrange[0] != None:
+            minx=xrange[0]
+        if xrange[1] != None:
+            maxx=xrange[1]
+        if yrange[0] != None:
+            miny=yrange[0]
+        if yrange[1] != None:
+            maxy=yrange[1]
+
         if plottype == 'scatter':
-            g = ax.scatter(data[geo_x], data[geo_y], c=data[hue], cmap=palette, edgecolor='silver', alpha=0.75, linewidth=0.5, s=20)
+            g = self.ax.scatter(data[geo_x], data[geo_y], c=data[hue], cmap=palette, edgecolor='silver', alpha=alpha, linewidth=0.5, s=20)
             cb = plt.colorbar(g)
             cb.set_label(hue)
         elif plottype == 'seaborn':
             alpha = 0.65
-            im = sns.scatterplot(x=geo_x, y=geo_y, hue=hue, data=data, alpha=0.75, legend='brief',palette=palette, edgecolor='silver', linewidth=0.5)
+            im = sns.scatterplot(x=geo_x, y=geo_y, hue=hue, data=data, alpha=alpha, legend='brief',palette=palette, edgecolor='silver', linewidth=0.5)
             # https://stackoverflow.com/questions/53437462/how-do-i-remove-an-attribute-from-the-legend-of-a-scatter-plot
             # EXTRACT CURRENT HANDLES AND LABELS
-            h, l = ax.get_legend_handles_labels()
+            h, l = self.ax.get_legend_handles_labels()
             # COLOR LEGEND (FIRST guess at size ITEMS) we don;t want to plot the distanceinc
             huelen = len(data.sort_values(by=hue, ascending=True)[hue].unique()) + 1
             col_lgd = plt.legend(h[:huelen], l[:huelen], loc='upper left', bbox_to_anchor=(1.05, 1), fancybox=True, shadow=True, ncol=1)
             plt.gca().add_artist(col_lgd)
-            ax.set_xlabel('')
-            ax.set_ylabel('')
+            self.ax.set_xlabel('')
+            self.ax.set_ylabel('')
             plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)  # Put the legend out of the figure
+        elif plottype == 'hist2d':
+            x = data[geo_x]
+            y = data[geo_y]
+            bins=100
+            gridsize=50
+            hb = plt.hexbin(x, y, bins=bins, cmap=palette, gridsize=gridsize,extent=[minX,maxX,minY,maxY])
+        elif plottype == 'probability':
+            contours = 12
+            bins = 50
+            minX, maxX = min(data[geo_x]),max(data[geo_x])
+            minY, maxY = min(data[geo_y]),max(data[geo_y])
+            plt.axis([minX, maxX, minY, maxY])
+            xgrid = np.linspace(minX, maxX, bins)
+            ygrid = np.linspace(minY, maxY, bins)
+            xdata = data[geo_x]
+            ydata = data[geo_y]
+            data = np.vstack([xdata, ydata])
+            xgrid = np.linspace(minX, maxX, bins)
+            ygrid = np.linspace(minY, maxY, bins)
+            Xgrid, Ygrid = np.meshgrid(xgrid, ygrid)
+            grid_sized = np.vstack([Xgrid.ravel(), Ygrid.ravel()])
+            # fit an array of size [Ndim, Nsamples]
+            kde = gaussian_kde(data, bw_method=0.1)
+            # evaluate on a regular grid
+            Z = kde.evaluate(grid_sized)
+            zgrid = Z.reshape(Xgrid.shape)
+            self.ax.grid(True, which='major', axis='both', linestyle='-', color=(0.5, 0.5, 0.5), alpha=0.1)
+            im = plt.pcolormesh(xgrid, ygrid, zgrid, shading='gouraud', cmap=palette, alpha=alpha)
+            cs = plt.contour(xgrid, ygrid, zgrid, contours, colors='0.7', linewidths=0.4, alpha=alpha,extent=[minX,maxX,minX,maxY])
+            self.ax.set_axisbelow(True)
 
-        ax.set_xlabel(geo_x)
-        ax.set_ylabel(geo_y)
+        self.ax.set_xlabel(geo_x + "\nCount=" + str(count))
+        self.ax.set_ylabel(geo_y)
         plt.title(title)
         #Having plotted we now need to get the image data from the plt
-        encoded = self.getPlotImage(fig, ax)
-        htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
-        self.HTMLIncrement()
-        self.html_string += '<td width=' + str(int(100/self.cols)) + '%>' + htmlstring + '</td>\n'
+        if not overlay:
+            encoded = self.getPlotImage(self.fig, self.ax)
+            htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
+            self.HTMLIncrement()
+            self.html_string += '<td width=' + str(int(100/self.cols)) + '%>' + htmlstring + '</td>\n'
 
-    def addPlot1d(self, data,plottype, geo_x,hue='',title='',palette='crimson'):
-        fig, ax = plt.subplots()
+    def addPlot1d(self, data,plottype, geo_x,hue='',title='',palette='crimson',overlay=False,alpha=1,xrange=[None,None],cumulative=False,density=False):
+        self.incrementOverlay(overlay)
+        if xrange[0] == None:
+            xrange[0] = min(data[geo_x])
+        if xrange[1] == None:
+            xrange[1] = max(data[geo_x])
+
+        if len(geo_x[0]) > 1: #todo evident bug if the x is a 1 lne stingf
+            mydata = data[geo_x]
+            mydata = mydata.transpose()
+        else:
+            mydata = data[geo_x]
+
         if plottype == 'histogram':
-            plt.hist(data[geo_x], EdgeColor='k', bins=20, color=palette, alpha=1, label='geo_x')
+            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density)
+        elif plottype == 'step':
+            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='step')
+        elif plottype == 'stepfilled':
+            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='stepfilled')
+        elif plottype == 'barstacked':
+            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='barstacked')
+        elif plottype == 'violin':
+            g = plt.violinplot(mydata,showmeans=False,showextrema=True,showmedians=True,quantiles=[0.25,0.75])
 
+        #cb = plt.colorbar(g)
         #hue is used to find the outliers
         if hue != '':
-            data = data.sort_values(by=geo_x,ascending=True)
-            firstval = data.head(1)[hue].values[0]
-            try:
-                firstval = str(round(firstval))
-            except:
-                pass
-            firstgeo = round(data.head(1)[geo_x].values[0],3)
-            data = data.sort_values(by=geo_x, ascending=False)
-            lastval = data.head(1)[hue].values[0]
-            try:
-                lastval = str(round(lastval))
-            except:
-                pass
-            lastgeo = round(data.head(1)[geo_x].values[0],3)
-            title += '\n' + hue + ': ' + str(firstval)+ '=' + str(firstgeo) + ' ' + str(lastval) + '=' + str(lastgeo)
+            geos = []
+            if len(geo_x[0]) > 1:  # todo evident bug if the x is a 1 lne stingf
+                geos = geo_x
+            else:
+                geos = [geo_x]
 
-        ax.set_xlabel(geo_x)
+            for geo in geos:
+                data = data.sort_values(by=geo,ascending=True)
+                firstval = data.head(1)[hue].values[0]
+                try:
+                    firstval = str(round(firstval))
+                except:
+                    pass
+                firstgeo = round(data.head(1)[geo].values[0],3)
+                data = data.sort_values(by=geo, ascending=False)
+                lastval = data.head(1)[hue].values[0]
+                try:
+                    lastval = str(round(lastval))
+                except:
+                    pass
+                lastgeo = round(data.head(1)[geo].values[0],3)
+                title += '\n' + geo + ' ' + hue + ': ' + str(firstval)+ '=' + str(firstgeo) + ' ' + str(lastval) + '=' + str(lastgeo)
+
+        self.ax.set_xlabel(geo_x)
         plt.title(title)
         # Having plotted we now need to get the image data from the plt
-        encoded = self.getPlotImage(fig, ax)
-        htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
-        self.HTMLIncrement()
-        self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
+        if not overlay:
+            encoded = self.getPlotImage(self.fig, self.ax)
+            htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
+            self.HTMLIncrement()
+            self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
 
-    def addPlotPi(self, data,geo_x,hue,title='',colors=[]):
-        fig, ax = plt.subplots()
+    def addPlotPi(self, data,geo_x,hue,title='',colors=[],overlay=False,alpha=1):
+        self.incrementOverlay(overlay)
         if colors == []:
             plt.pie(data[geo_x],labels=data[hue])
         else:
-            plt.pie(data[geo_x], labels=data[hue],colors=colors)
+            plt.pie(data[geo_x], labels=data[hue],colors=colors,alpha=alpha)
         plt.title(title)
         # Having plotted we now need to get the image data from the plt
-        encoded = self.getPlotImage(fig, ax)
-        htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
-        self.HTMLIncrement()
-        self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
+        if not overlay:
+            encoded = self.getPlotImage(self.fig, self.ax)
+            htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
+            self.HTMLIncrement()
+            self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
 
     def addSeries(self,data,title='',transpose=False):
         if transpose:
@@ -208,7 +289,37 @@ class GeoHTML:
         self.HTMLIncrement()
         self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + title + '</br>' + innerhtml + '</td>\n'
 
-    def addSurface(self, mtx, title='',palette='inferno',alpha=0.9,overlay=False):
+    def mtxCap(self,mtx,cap):
+        if cap < 0:
+            return self.mtxCapMin(mtx,cap)
+        else:
+            mtxret = np.zeros(mtx.shape)
+            mmin,mmax = np.amin(mtx),np.max(mtx)
+            capped = mmin + cap*(mmax-mmin)
+            a,b = mtx.shape
+            for i in range(a):
+                for j in range(b):
+                    if mtx[i,j] > capped:
+                        mtxret[i, j] = capped
+                    else:
+                        mtxret[i, j] = mtx[i, j]
+            return mtxret
+
+    def mtxCapMin(self,mtx,cap):
+        mtxret = np.zeros(mtx.shape)
+        mmin,mmax = np.amin(mtx),np.max(mtx)
+        capped = mmax + cap*(mmax-mmin)
+        a,b = mtx.shape
+        for i in range(a):
+            for j in range(b):
+                if mtx[i,j] < capped:
+                    mtxret[i, j] = capped
+                else:
+                    mtxret[i, j] = mtx[i, j]
+        return mtxret
+
+
+    def incrementOverlay(self,overlay):
         if overlay:
             if not self.overlay_open:
                 self.fig, self.ax = plt.subplots()
@@ -218,7 +329,89 @@ class GeoHTML:
                 self.fig, self.ax = plt.subplots()
             self.overlay_open = False
 
-        image = plt.imshow(mtx,cmap=palette,interpolation='nearest',origin='lower',aspect='equal',alpha=alpha)
+    def addSurface(self, mtx, title='',palette='inferno',alpha=0.9,overlay=False,cmin=None,cmax=None,cap=0,colourbar=False,centred=False):
+        self.incrementOverlay(overlay)
+
+        if cap != 0:
+            mtx = self.mtxCap(mtx,cap)
+
+        vmin, vmax = np.amin(mtx), np.max(mtx)
+        if cmin != None:
+            vmin = cmin
+        if cmax != None:
+            vmax = cmax
+
+        image = plt.imshow(mtx, cmap=palette, interpolation='nearest', origin='lower', aspect='equal', alpha=alpha,vmin=vmin, vmax=vmax)
+
+        plt.axis('off')
+        plt.title(title)
+
+        if colourbar:
+            self.fig.colorbar(image, ax=self.ax)
+        # Having plotted we now need to get the image data from the plt
+        if not overlay:
+            encoded = self.getPlotImage(self.fig, self.ax)
+            htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
+            self.HTMLIncrement()
+            self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
+
+    def addContours(self, mtx, title='',style='filled', contourlabel=False,levels=10,centred=False,palette='inferno',alpha=0.9,colourbar=True,overlay=False,cmin=None,cmax=None,cap=0):
+        '''
+        :param mtx:
+        :param title:
+        :param style: Can be filled, lines or both
+        :param label: label the contours
+        :param levels: can be number or cohosen list
+        :param centres: sets 0 as the middle in the colours (use divergent colour map)
+        :param palette:
+        :param alpha:
+        :param overlay:
+        :return:
+        '''
+        self.incrementOverlay(overlay)
+
+        # Need to turn the matrix into something countourable
+        if cap != 0:
+            mtx = self.mtxCap(mtx,cap)
+
+        vmin,vmax = np.amin(mtx),np.max(mtx)
+        if cmin != None:
+            vmin = cmin
+        if cmax != None:
+            vmax = cmax
+        elif centred:
+            vmax = max(abs(vmin),abs(vmax))
+            vmin = -1 * vmax
+
+        #Need the X and Z
+        a,b = mtx.shape
+        x = np.arange(0,a,1)
+        y = np.arange(0, b, 1)
+        X,Y = np.meshgrid(x,y)
+        Z = mtx
+
+        self.ax.set_aspect('equal')
+        self.ax.axes.xaxis.set_ticklabels([])
+        self.ax.axes.yaxis.set_ticklabels([])
+
+        if style=='filled':
+            cf = self.ax.contourf(X,Y,Z,cmap=palette,levels=levels,alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
+        elif style == 'lines':
+            cf = self.ax.contour(X, Y, Z, cmap=palette, levels=levels, alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
+        else:
+            cf = self.ax.contourf(X, Y, Z, cmap=palette, alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
+            cf2 = self.ax.contour(X, Y, Z, colors='black', vmin=vmin,vmax=vmax,extend='both')
+
+        if contourlabel:
+            if style=='both':
+                self.ax.clabel(cf2,inline=True,fontsize=8)
+            elif style=='lines':
+                self.ax.clabel(cf, inline=True, fontsize=8)
+            # can't put contours names without lines
+
+        if colourbar:
+            self.fig.colorbar(cf,ax=self.ax)
+
         plt.axis('off')
         plt.title(title)
         # Having plotted we now need to get the image data from the plt

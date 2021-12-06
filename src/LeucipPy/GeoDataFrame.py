@@ -25,7 +25,7 @@ class GeoDataFrame:
             self.bio_strucs.append(geopdb)
 
 
-    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','bfactor','occupancy']):
+    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','occupancy','other'],log=0):
         """Creates the geoemtry from the structures in the class
 
         :param geos: A list of geometric measures to calculate in the format 2,3 or 4 atoms for distance, angle or dihedral, e.g. 'N:CA', 'N:CA:C', or 'N:CA:C:N+1'
@@ -35,8 +35,16 @@ class GeoDataFrame:
 
         vals = []
         used_hues = []
+        for i in range(0,len(geos)):
+            hues.append('other' + str(i+1))
+
+        count = 1
         for geopdb in self.bio_strucs:
             hue_pdb = geopdb.pdb_code
+            if log > 0:
+                print('LeucipPy(1) df calc for ' + hue_pdb, count, '/', len(self.bio_strucs))
+                count += 1
+
             hue_res = geopdb.resolution
             ridx = 1
             for chain, res in geopdb.chains.items():
@@ -53,9 +61,12 @@ class GeoDataFrame:
                         refatom = resd.atoms['CA']
 
                     all_geos_ok = True
+                    other_num = 0
+                    all_hues = {}
                     for geo in geos:
+                        other_num += 1
                         geo_as_atoms = self.geoToAtoms(geo)
-                        ok,val,bfac,occ,rno, rnox,num,refatom = geopdb.calculateGeometry(chain,rid,geo_as_atoms)
+                        ok,val,bfac,occ,rno, rnox,num,refatom,other = geopdb.calculateGeometry(chain,rid,geo_as_atoms,log)
                         avg_bfactor += bfac
                         avg_occupancy += occ
                         avg_rid += rno
@@ -63,23 +74,24 @@ class GeoDataFrame:
                         num_atoms += num
                         if ok:
                             tuplerow.append(val)
+                            all_hues['other' + str(other_num)] = other
                         else:
                             all_geos_ok = False
                     #Append hues
                     if all_geos_ok:#we are only adding complete rows
-                        all_hues = {}
                         all_hues['pdb_code'] =hue_pdb
                         all_hues['resolution'] =hue_res
                         all_hues['chain'] = chain
                         all_hues['aa'] =hue_aa
-                        all_hues['rid'] = avg_rid/ num_atoms
-                        all_hues['ridx'] =avg_ridx/ num_atoms
+                        all_hues['avgrid'] = avg_rid/ num_atoms
+                        all_hues['avgridx'] =avg_ridx/ num_atoms
+                        all_hues['rid'] = rid
+                        all_hues['ridx'] = resd.ridx
                         all_hues['bfactor'] =avg_bfactor / num_atoms
                         all_hues['occupancy'] =avg_occupancy / num_atoms
-
                         used_hues = []
                         for hue in hues:
-                            if hue in all_hues:
+                            if hue in all_hues and hue not in used_hues:
                                 used_hues.append(hue)
                                 tuplerow.append(all_hues[hue])
                         # TODO special optional hue of type aa-1:aa:aa+1
@@ -111,7 +123,7 @@ class GeoDataFrame:
             geo_atoms.append([g_atom,ref])
         return geo_atoms
 
-    def calculateData(self,hues=['pdb_code','resolution','chain','aa','rid','ridx','atom_no','atom_name','element','bfactor','occupancy','x','y','z']):
+    def calculateData(self,hues=['pdb_code','resolution','chain','aa','rid','ridx','atom_no','atom_name','element','bfactor','occupancy','x','y','z'],log=0):
         """Creates the geoemtry from the structures in the class
 
         :param geos: A list of geometric measures to calculate in the format 2,3 or 4 atoms for distance, angle or dihedral, e.g. 'N:CA', 'N:CA:C', or 'N:CA:C:N+1'
@@ -120,9 +132,14 @@ class GeoDataFrame:
         """
 
         vals = []
+        count = 1
+        used_hues = []
         for geopdb in self.bio_strucs:
             pdb = geopdb.pdb_code
-            res = geopdb.resolution
+            if log > 0:
+                print('LeucipPy(1) df calc for ' + pdb, count,'/',len(self.bio_strucs))
+                count += 1
+            reso = geopdb.resolution
 
             for chain, res in geopdb.chains.items():
                 for rid, resd in res.items():
@@ -131,7 +148,7 @@ class GeoDataFrame:
                         tuplerow = []
                         all_hues = {}
                         all_hues['pdb_code'] =pdb
-                        all_hues['resolution'] =res
+                        all_hues['resolution'] =reso
                         all_hues['chain'] = chain
                         all_hues['aa'] =aa
                         all_hues['rid'] = resd.rid
@@ -151,4 +168,13 @@ class GeoDataFrame:
                                 tuplerow.append(all_hues[hue])
                         vals.append(tuplerow)
         df = pd.DataFrame(vals,columns=used_hues)
+        return df
+
+    def filferDataFrame(self,data, inclusions={},exclusions={}):
+        df = data
+        for ky,vls in inclusions.items():
+            df = df[df[ky].isin(vls)]
+
+        for ky,vls in exclusions.items():
+            df = df[~df[ky].isin(vls)]
         return df

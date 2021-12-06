@@ -34,7 +34,7 @@ class GeoPdb:
         self.createAtomsList()
 
 
-    def calculateGeometry(self,chain, resno, geo_atoms):
+    def calculateGeometry(self,chain, resno, geo_atoms,log=0):
         """Creates the geoemtry from the structure in the class for 1 geo
 
         :param chain: The chain id
@@ -43,9 +43,10 @@ class GeoPdb:
 
         :returns: [bool,float,bfactor, occupancy, atoms, GeoAtom] a bool for if it could be calculated, and the value, and the reference atom
         """
-
         total_rid = 0
         total_ridx = 0
+        other = ''
+        is_nearest = False
 
         rids = self.chains[chain]
         all_there = True
@@ -53,20 +54,53 @@ class GeoPdb:
         for atom,offset in geo_atoms:
             this_rid = resno + offset
             if this_rid not in rids:
-                return False,0,0,0,0,0,0,None
+                return False,0,0,0,0,0,0,None,''
             else:
                 rid = rids[this_rid]
-                if atom not in rid.atoms:
-                    return False,0,0,0,0,0,0,None
+                if '{' in atom and '}' in atom: #then we need to do a distance search first and iut must be the second atom
+                    #print('dbg1', atom)
+                    is_nearest = True
+                    refatm = atoms[0]
+                    atomlist = atom[1:len(atom) - 1]
+                    nearest = 1
+                    if "@" in atomlist:
+                        #print('dbg1', atomlist)
+                        ats = atomlist.split('@')
+                        #print('dbg1',ats)
+                        atomlist = ats[0]
+                        nearest =ats[1]
+                    else:
+                        atomlist = atom[1:len(atom)-1]
+                    atomlist = atomlist.split(',')
+                    debugatomlist = atom[1:len(atom)-1].split(',')
+                    last_atm = None
+                    last_dis = 10000
+                    last_other = ""
+                    for atmtype in atomlist:
+                        dis,this_atm,other2 = self._getNearestAtom(refatm, resno,chain,atmtype,offset,nearest,log)
+
+                        if dis < last_dis:
+                            last_atm = this_atm
+                            last_dis = dis
+                            last_other = other2
+
+                    other += "_" + last_other
+                    if last_other != "":
+                        atoms.append(last_atm)
+                    else:
+                        return False, 0, 0, 0, 0, 0, 0, None,''
+                elif atom not in rid.atoms:
+                    return False,0,0,0,0,0,0,None,''
                 else:
                     total_rid += rid.rid;
                     total_ridx += rid.ridx;
                     atm = rid.atoms[atom]
+                    other += "_" + str(rid.amino_acid) + str(rid.rid) + str(chain) + "|" + atm.atom_name
                     atoms.append(atm)
 
         val = 0
         if len(atoms) == 2:
-            if atoms[0].atom_name == atoms[1].atom_name:#then we actually just want the distance magnitude of the single atom
+            if not is_nearest and atoms[0].atom_name == atoms[1].atom_name and atoms[0].atom_no == atoms[1].atom_no :#then we actually just want the distance magnitude of the single atom
                 val = calc.getMagnitude(atoms[0].x,atoms[0].y,atoms[0].z)
             else:
                 val = calc.getDistance(atoms[0].x, atoms[0].y, atoms[0].z,
@@ -89,11 +123,49 @@ class GeoPdb:
 
 
 
-        return True, val, total_bfactor, total_occupancy, total_rid, total_ridx, len(atoms), atoms[0]
+        return True, val, total_bfactor, total_occupancy, total_rid, total_ridx, len(atoms), atoms[0],other[1:]
 
 
+    def _getNearestAtom(self,refatm, ref_rid,ref_chain,atmtype,resmax,nearest,log=0):
+        if log > 1:
+            print('LeucipPy(2) nearest:',atmtype,"within res num=",resmax,"nearest=",nearest)
+        dic_res = {}
+        last_dis = 10000
+        last_atom = None
+        other = ''
+        for chain,resdic in self.chains.items():
+            for no,res in resdic.items():
+                for attype,atm in res.atoms.items():
+                    if attype == atmtype:
+                        distance = calc.getDistance(refatm.x, refatm.y,refatm.z,atm.x,atm.y,atm.z)
+                        if distance < last_dis and (abs(no - ref_rid) >= resmax or ref_chain != chain):
+                            other = str(res.amino_acid) + str(no) + str(chain) + "|" + atm.atom_name
+                            dic_res[distance] = [atm,other]
+
+                        #    last_dis = distance
+                        #    last_atom = atm
 
 
+        count = 1
+        sorted_dic = dict(sorted(dic_res.items()))
+        found = False
+        for dis,st in sorted_dic.items():
+            if log > 2:
+                print("LeucipPy(3) nearest", count,nearest,round(dis,4),st[0].atom_name)
+            if int(count) == int(nearest):
+                last_dis = dis
+                last_atom = st[0]
+                other = st[1]
+                found = True
+                #print("...LeucipPy found")
+                break
+            count +=1
+
+        if found:
+            #print("...LeucipPy return",last_dis,other)
+            return last_dis,last_atom,other
+        else:
+            return 0, "", ""
 
     def createAtomsList(self):
         self.resolution = self.bio_struc.header['resolution']
