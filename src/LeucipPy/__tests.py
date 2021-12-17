@@ -12,7 +12,7 @@ import os
 from urllib.request import urlretrieve
 parser = bio.PDBParser()
 strucs = []
-for pdb_code in ['3nir','1ejg']:
+for pdb_code in ['3nir','1ejg','4u9h','5jsk']:
   pdb_file = 'pdb' + pdb_code + '.ent'
   pdb_loc = ('https://www.ebi.ac.uk/pdbe/entry-files/download/pdb' + pdb_code + '.ent')
   if not os.path.exists(pdb_file):
@@ -22,6 +22,8 @@ for pdb_code in ['3nir','1ejg']:
 
 geo = gdf.GeoDataFrame(strucs)
 df = geo.calculateGeometry(['C:O','C:N+1'])
+df3 = geo.calculateGeometry(['FE:{O}','FE:{O@2}'])
+print(df3)
 #print(df)
 
 # 2 ######## TEST THE DATAFRAME DATA ##############################
@@ -32,10 +34,12 @@ df2 = geo.calculateData()
 import GeoHTML as ghm
 rep = ghm.GeoHTML("Testing LeucipPy","test_leu.html")
 
-rep.addPlot1d(df,'histogram','C:{,O,}',hue='rid',title='Hist',overlay=True)
+rep.addPlot1d(df,'histogram','C:O',hue='rid',title='Hist',overlay=False)
+rep.addPlot1d(df3,'histogram','FE:{O}',hue='rid',title='Hist',overlay=False)
+rep.addPlot2d(df3,'scatter','FE:{O}','FE:{O@2}','bfactor',title='test',overlay=False,alpha=1)
 
-
-rep.addPlot2d(df,'scatter','C:O','C:N+1','bfactor',title='test',overlay=True)
+rep.addPlot2d(df,'scatter','C:O','C:N+1','bfactor',title='test',overlay=False,alpha=0.1)
+rep.addPlot2d(df,'scatter','C:O','C:N+1','bfactor',title='test',overlay=False,alpha=0.8)
 rep.addPlot2d(df,'seaborn','C:N+1','C:O','pdb_code')
 rep.addLineComment('Something to be said')
 rep.changeColNumber(4)

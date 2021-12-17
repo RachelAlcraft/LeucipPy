@@ -20,6 +20,7 @@ class GeoResidue:
         """
 
         self.atoms = {}
+        self.elements = {}
         self.amino_acid = amino_acid
         self.rid = rid
         self.ridx = ridx

@@ -28,6 +28,7 @@ import GeoHTML as ghm
 import StatsThings as st
 rep = ghm.GeoHTML("Testing LeucipPy Distances","test_dist.html")
 rep.addPlot2d(df,'seaborn',geo_x=geoA,geo_y=geoB,hue='pdb_code',title='Cross Link NOS')
+rep.addPlot2d(df,'scatter',geo_x=geoA,geo_y=geoB,hue='bfactor',title='Cross Link NOS',crange=[2,3],alpha=0.5)
 rep.addPlot2d(df,'hist2d',geo_x=geoA,geo_y=geoB,hue='count',title='Cross Link NOS')
 rep.addPlot2d(df,'probability',geo_x=geoA,geo_y=geoB,hue='count',title='Cross Link NOS')
 a,tst = st.normalityShapiroWilk(df[geoA].values,0.05,htmlise=True)
@@ -36,7 +37,7 @@ rep.printReport()
 
 print(df)
 #dfa = geo.filferDataFrame(df,inclusions={'aa':['LYS','CYS']})
-dfb = geo.filferDataFrame(df,inclusions={'aa':['CYS']})
+dfb = geo.filterDataFrame(df,inclusions={'aa':['CYS']})
 #dfc = geo.filferDataFrame(df,exclusions={'aa':['CYS','GLY']})
 #dfd = geo.filferDataFrame(df,exclusions={'aa':['PRO']})
 #print(dfa)

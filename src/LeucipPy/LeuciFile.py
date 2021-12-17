@@ -68,3 +68,12 @@ class LeuciFile:
 
         return numtx, vmin, vmax
 
+    def placeDataFrameOnMatrix(self,data, hue,mtx):
+        idxs = data.index
+        for idx in idxs:
+            i = int(data['i'][idx])
+            j = int(data['j'][idx])
+            val = float(data[hue][idx])
+            mtx[i, j] += val
+        return mtx
+

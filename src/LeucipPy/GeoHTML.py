@@ -68,7 +68,7 @@ class GeoHTML:
         self.HTMLIncrement()
         self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>'+comment+'</td>\n'
 
-    def addPlot2d(self,data,plottype,geo_x,geo_y,hue,title='',palette='viridis',overlay=False,alpha=1,xrange=[None,None],yrange=[None,None]):
+    def addPlot2d(self,data,plottype,geo_x,geo_y,hue,title='',palette='viridis',overlay=False,alpha=1,xrange=[None,None],yrange=[None,None],crange=[None,None]):
         self.incrementOverlay(overlay)
         self.ax.grid(b=True, which='major', color='Gainsboro', linestyle='-')
         self.ax.set_axisbelow(True)
@@ -76,9 +76,11 @@ class GeoHTML:
         count = len(data[geo_x])
         minX,maxX = 0,0
         minY, maxY = 0, 0
+        cmin, cmax = 0, 0
         try:
             minX, maxX = min(data[geo_x]), max(data[geo_x])
             minY, maxY = min(data[geo_y]), max(data[geo_y])
+            cmin, cmax = min(data[hue]), max(data[hue])
         except:
             pass
         if xrange[0] != None:
@@ -89,13 +91,17 @@ class GeoHTML:
             miny=yrange[0]
         if yrange[1] != None:
             maxy=yrange[1]
+        if crange[0] != None:
+            cmin=crange[0]
+        if crange[1] != None:
+            cmax=crange[1]
 
         if plottype == 'scatter':
-            g = self.ax.scatter(data[geo_x], data[geo_y], c=data[hue], cmap=palette, edgecolor='silver', alpha=alpha, linewidth=0.5, s=20)
+            g = self.ax.scatter(data[geo_x], data[geo_y], c=data[hue], cmap=palette, edgecolor='silver', alpha=alpha, linewidth=0.5, s=20,vmin=cmin,vmax=cmax)
             cb = plt.colorbar(g)
             cb.set_label(hue)
         elif plottype == 'seaborn':
-            alpha = 0.65
+
             im = sns.scatterplot(x=geo_x, y=geo_y, hue=hue, data=data, alpha=alpha, legend='brief',palette=palette, edgecolor='silver', linewidth=0.5)
             # https://stackoverflow.com/questions/53437462/how-do-i-remove-an-attribute-from-the-legend-of-a-scatter-plot
             # EXTRACT CURRENT HANDLES AND LABELS
@@ -148,7 +154,7 @@ class GeoHTML:
             self.HTMLIncrement()
             self.html_string += '<td width=' + str(int(100/self.cols)) + '%>' + htmlstring + '</td>\n'
 
-    def addPlot1d(self, data,plottype, geo_x,hue='',title='',palette='crimson',overlay=False,alpha=1,xrange=[None,None],cumulative=False,density=False):
+    def addPlot1d(self, data,plottype, geo_x,hue='',title='',palette='crimson',overlay=False,alpha=1,xrange=[None,None],cumulative=False,density=False,bins=20):
         self.incrementOverlay(overlay)
         if xrange[0] == None:
             xrange[0] = min(data[geo_x])
@@ -162,13 +168,13 @@ class GeoHTML:
             mydata = data[geo_x]
 
         if plottype == 'histogram':
-            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density)
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density)
         elif plottype == 'step':
-            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='step')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='step')
         elif plottype == 'stepfilled':
-            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='stepfilled')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='stepfilled')
         elif plottype == 'barstacked':
-            g = plt.hist(mydata, EdgeColor='k', bins=20, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='barstacked')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='barstacked')
         elif plottype == 'violin':
             g = plt.violinplot(mydata,showmeans=False,showextrema=True,showmedians=True,quantiles=[0.25,0.75])
 
@@ -355,7 +361,7 @@ class GeoHTML:
             self.HTMLIncrement()
             self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
 
-    def addContours(self, mtx, title='',style='filled', contourlabel=False,levels=10,centred=False,palette='inferno',alpha=0.9,colourbar=True,overlay=False,cmin=None,cmax=None,cap=0):
+    def addContours(self, mtx, title='',style='filled', contourlabel=False,levels=10,centred=False,palette='inferno',alpha=0.9,colourbar=True,overlay=False,cmin=None,cmax=None,cap=0,linewidth=None):
         '''
         :param mtx:
         :param title:
@@ -397,10 +403,10 @@ class GeoHTML:
         if style=='filled':
             cf = self.ax.contourf(X,Y,Z,cmap=palette,levels=levels,alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
         elif style == 'lines':
-            cf = self.ax.contour(X, Y, Z, cmap=palette, levels=levels, alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
+            cf = self.ax.contour(X, Y, Z, cmap=palette, levels=levels, alpha=alpha,vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
         else:
             cf = self.ax.contourf(X, Y, Z, cmap=palette, alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
-            cf2 = self.ax.contour(X, Y, Z, colors='black', vmin=vmin,vmax=vmax,extend='both')
+            cf2 = self.ax.contour(X, Y, Z, colors='black', vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
 
         if contourlabel:
             if style=='both':

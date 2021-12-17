@@ -13,7 +13,7 @@ except:
 
 
 class GeoDataFrame:
-    def __init__(self,biopython_structures):
+    def __init__(self,biopython_structures,log=0):
         """Initialises a GeoDataFrame with the list of biopython structures
 
         :param biopython_structures: A list of structures that has been created from biopython
@@ -21,11 +21,13 @@ class GeoDataFrame:
 
         self.bio_strucs = []
         for bio_struc in biopython_structures:
+            if log > 0:
+                print('LeucipPy(1): load pdb atoms: ', bio_struc.id)
             geopdb = pdb.GeoPdb(bio_struc)
             self.bio_strucs.append(geopdb)
 
 
-    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','occupancy','other'],log=0):
+    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','occupancy','info'],log=0):
         """Creates the geoemtry from the structures in the class
 
         :param geos: A list of geometric measures to calculate in the format 2,3 or 4 atoms for distance, angle or dihedral, e.g. 'N:CA', 'N:CA:C', or 'N:CA:C:N+1'
@@ -35,8 +37,8 @@ class GeoDataFrame:
 
         vals = []
         used_hues = []
-        for i in range(0,len(geos)):
-            hues.append('other' + str(i+1))
+        for geo in geos:
+            hues.append('info' + geo)
 
         count = 1
         for geopdb in self.bio_strucs:
@@ -61,10 +63,8 @@ class GeoDataFrame:
                         refatom = resd.atoms['CA']
 
                     all_geos_ok = True
-                    other_num = 0
                     all_hues = {}
                     for geo in geos:
-                        other_num += 1
                         geo_as_atoms = self.geoToAtoms(geo)
                         ok,val,bfac,occ,rno, rnox,num,refatom,other = geopdb.calculateGeometry(chain,rid,geo_as_atoms,log)
                         avg_bfactor += bfac
@@ -74,7 +74,7 @@ class GeoDataFrame:
                         num_atoms += num
                         if ok:
                             tuplerow.append(val)
-                            all_hues['other' + str(other_num)] = other
+                            all_hues['info' + geo] = other
                         else:
                             all_geos_ok = False
                     #Append hues
@@ -170,7 +170,7 @@ class GeoDataFrame:
         df = pd.DataFrame(vals,columns=used_hues)
         return df
 
-    def filferDataFrame(self,data, inclusions={},exclusions={}):
+    def filterDataFrame(self,data, inclusions={},exclusions={}):
         df = data
         for ky,vls in inclusions.items():
             df = df[df[ky].isin(vls)]
