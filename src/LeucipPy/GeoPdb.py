@@ -48,6 +48,8 @@ class GeoPdb:
         other = ''
         is_nearest = False
 
+        empty_return = [False, 0, 0, 0, 0, 0, 0, 0, None,'']
+
         rids = self.chains[chain]
         all_there = True
         atoms = []
@@ -105,10 +107,10 @@ class GeoPdb:
                     else:
                         if log > 1:
                             print('...LeucipPy(2) Not found',resno,chain,atomlist,offset,nearest)
-                        return False, 0, 0, 0, 0, 0, 0, None,''
+                        return empty_return
                 elif int(this_rid) not in rids:
                     #print(this_rid, resno)
-                    return False, 0, 0, 0, 0, 0, 0, None, ''
+                    return empty_return
 
                 else:
                     rid = rids[this_rid]
@@ -122,10 +124,10 @@ class GeoPdb:
                             other += "_" + str(rid.amino_acid) + "|" + str(rid.rid) + str(chain) + "|" + atm.atom_name
                             atoms.append(atm)
                         else:
-                            return False, 0, 0, 0, 0, 0, 0, None, ''
+                            return empty_return
                     else:
                         if atom not in rid.atoms:
-                            return False,0,0,0,0,0,0,None,''
+                            return empty_return
                         total_rid += rid.rid;
                         total_ridx += rid.ridx;
                         atm = rid.atoms[atom]
@@ -151,14 +153,17 @@ class GeoPdb:
                                    atoms[3].x, atoms[3].y, atoms[3].z)
 
         total_bfactor = 0
+        bfactor = 0
         total_occupancy = 0
         for atm in atoms:
+            if bfactor == 0:
+                bfactor = atm.bfactor
             total_bfactor += atm.bfactor
             total_occupancy  += atm.occupancy
 
 
 
-        return True, val, total_bfactor, total_occupancy, total_rid, total_ridx, len(atoms), atoms[0],other[1:]
+        return True, val, bfactor,total_bfactor, total_occupancy, total_rid, total_ridx, len(atoms), atoms[0],other[1:]
 
 
     def _getNearestAtom(self,refatm, ref_rid,ref_chain,atmtypes,resmax,nearest,log=0,elements=False):

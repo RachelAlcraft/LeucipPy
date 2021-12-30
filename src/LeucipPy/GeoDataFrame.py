@@ -27,7 +27,7 @@ class GeoDataFrame:
             self.bio_strucs.append(geopdb)
 
 
-    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','occupancy','info'],log=0):
+    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','avgbfactor','occupancy','info'],log=0):
         """Creates the geoemtry from the structures in the class
 
         :param geos: A list of geometric measures to calculate in the format 2,3 or 4 atoms for distance, angle or dihedral, e.g. 'N:CA', 'N:CA:C', or 'N:CA:C:N+1'
@@ -52,6 +52,7 @@ class GeoDataFrame:
             for chain, res in geopdb.chains.items():
                 for rid, resd in res.items():
                     avg_bfactor = 0
+                    bfactor = 0
                     avg_occupancy = 0
                     avg_rid = 0
                     avg_ridx = 0
@@ -66,12 +67,14 @@ class GeoDataFrame:
                     all_hues = {}
                     for geo in geos:
                         geo_as_atoms = self.geoToAtoms(geo)
-                        ok,val,bfac,occ,rno, rnox,num,refatom,other = geopdb.calculateGeometry(chain,rid,geo_as_atoms,log)
-                        avg_bfactor += bfac
+                        ok,val,bfac,avgbfac,occ,rno, rnox,num,refatom,other = geopdb.calculateGeometry(chain,rid,geo_as_atoms,log)
+                        avg_bfactor += avgbfac
                         avg_occupancy += occ
                         avg_rid += rno
                         avg_ridx += rnox
                         num_atoms += num
+                        if bfactor == 0:
+                            bfactor = bfac
                         if ok:
                             tuplerow.append(val)
                             all_hues['info' + geo] = other
@@ -87,7 +90,8 @@ class GeoDataFrame:
                         all_hues['avgridx'] =avg_ridx/ num_atoms
                         all_hues['rid'] = rid
                         all_hues['ridx'] = resd.ridx
-                        all_hues['bfactor'] =avg_bfactor / num_atoms
+                        all_hues['avgbfactor'] =avg_bfactor / num_atoms
+                        all_hues['bfactor'] = bfactor
                         all_hues['occupancy'] =avg_occupancy / num_atoms
                         used_hues = []
                         for hue in hues:
@@ -98,8 +102,12 @@ class GeoDataFrame:
                         vals.append(tuplerow)
                     ridx += 1
 
-        geos.extend(used_hues)
-        df = pd.DataFrame(vals,columns=geos)
+        geos2 = []
+        for geo in geos:
+            geos2.append(geo)
+
+        geos2.extend(used_hues)
+        df = pd.DataFrame(vals,columns=geos2)
         return df
 
     def geoToAtoms(self, geo):
