@@ -1,5 +1,5 @@
 
-import GeoDataFrame as gdf
+import DataFrameMaker as gdf
 import Bio.PDB as bio
 import os
 from urllib.request import urlretrieve
@@ -14,33 +14,34 @@ for pdb_code in ['6zx4','3u7z','6vb2']:
   struc = parser.get_structure(pdb_code,pdb_file)
   strucs.append(struc)
 
-geo = gdf.GeoDataFrame(strucs)
+geo = gdf.DataFrameMaker(strucs)
 geoA = 'SG:{SG}+1'
 geoB = 'SG:{N}+2'
 geoC = 'SG:{SG@1}'
 geoD = 'SG:{SG@2}'
 geoE = 'SG:SG'
 df = geo.calculateGeometry([geoA,geoB],log=1)
-print(df)
+#print(df)
 
 
-import GeoHTML as ghm
+import HtmlReportMaker as ghm
 import StatsThings as st
-rep = ghm.GeoHTML("Testing LeucipPy Distances","test_dist.html")
-rep.addPlot2d(df,'seaborn',geo_x=geoA,geo_y=geoB,hue='pdb_code',title='Cross Link NOS')
-rep.addPlot2d(df,'scatter',geo_x=geoA,geo_y=geoB,hue='bfactor',title='Cross Link NOS',crange=[2,3],alpha=0.5)
+rep = ghm.HtmlReportMaker("Testing LeucipPy Distances","test_dist.html",clr_header='lightsteelblue',clr_background='lightblue',clr_behindplot='crimson')
+rep.addPlot2d(df,'seaborn',geo_x=geoA,geo_y=geoB,hue='pdb_code',title='Cross Link NOS',xrange=[4,10])
+rep.addPlot2d(df,'scatter',geo_x=geoA,geo_y=geoB,hue='bfactor',title='Cross Link NOS',crange=[2,3],alpha=0.5,xrange=[4,10])
 rep.addPlot2d(df,'hist2d',geo_x=geoA,geo_y=geoB,hue='count',title='Cross Link NOS')
+rep.addLineComment('comment')
 rep.addPlot2d(df,'probability',geo_x=geoA,geo_y=geoB,hue='count',title='Cross Link NOS')
 a,tst = st.normalityShapiroWilk(df[geoA].values,0.05,htmlise=True)
 rep.addBoxComment(tst)
 rep.printReport()
 
-print(df)
+#print(df)
 #dfa = geo.filferDataFrame(df,inclusions={'aa':['LYS','CYS']})
 dfb = geo.filterDataFrame(df,inclusions={'aa':['CYS']})
 #dfc = geo.filferDataFrame(df,exclusions={'aa':['CYS','GLY']})
 #dfd = geo.filferDataFrame(df,exclusions={'aa':['PRO']})
 #print(dfa)
-print(dfb)
+#print(dfb)
 #print(dfc)
 #print(dfd)

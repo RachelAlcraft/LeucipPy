@@ -3,22 +3,26 @@ import LeucipPy as leu
 
 
 # 2 ######## TEST FE search ##############################
-import GeoDataFrame as gdf
+import DataFrameMaker as gdf
 import Bio.PDB as bio
 import os
+import BioPythonMaker as bpm
 from urllib.request import urlretrieve
 parser = bio.PDBParser()
 strucs = []
 #for pdb_code in ['4u9h','5jsk','6rk0']:
-for pdb_code in ['5jsk']:
-  pdb_file = 'pdb' + pdb_code + '.ent'
-  pdb_loc = ('https://www.ebi.ac.uk/pdbe/entry-files/download/pdb' + pdb_code + '.ent')
-  if not os.path.exists(pdb_file):
-      urlretrieve(pdb_loc, pdb_file)
-  struc = parser.get_structure(pdb_code,pdb_file)
-  strucs.append(struc)
+#for pdb_code in ['5jsk']:
+#  pdb_file = 'pdb' + pdb_code + '.ent'
+#  pdb_loc = ('https://www.ebi.ac.uk/pdbe/entry-files/download/pdb' + pdb_code + '.ent')
+#  if not os.path.exists(pdb_file):
+#      urlretrieve(pdb_loc, pdb_file)
+#  struc = parser.get_structure(pdb_code,pdb_file)
+#  strucs.append(struc)
 
-geo = gdf.GeoDataFrame(strucs)
+
+strucs = bpm.loadPdbStructures([],'',extension='ent',prefix='pdb',log=2)
+
+geo = gdf.DataFrameMaker(strucs)
 #df = geo.calculateGeometry(['FE:{O}','FE:{O@2}'])
 #print(df)
 

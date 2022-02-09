@@ -15,7 +15,7 @@ import numpy as np
 from scipy.stats import gaussian_kde
 
 
-class GeoHTML_depr:
+class HtmlReportMaker:
     """Class for a single atom
 
     :data html_string:
@@ -23,13 +23,18 @@ class GeoHTML_depr:
     :data title:
     """
 
-    def __init__(self, title,outpath, cols=3, remove_strip=False):
+    def __init__(self, title,outpath, cols=3, remove_strip=False,clr_header='lightsteelblue',clr_background='lightblue',clr_behindplot='seashell'):
         """Initialises a GeoPdb with a biopython structure
 
         :param biopython_structure: A list of structures that has been created from biopython
         """
 
         #self.df = dataframe
+        #a few of the style params for the html report
+        self.clr_background = clr_background
+        self.clr_behindplot = clr_behindplot
+        self.clr_header = clr_header
+
         self.outpath = outpath
         self.title=title
         self.cols = cols
@@ -37,9 +42,7 @@ class GeoHTML_depr:
         self.html_string = self.getHeaderString(self.title, remove_strip)
         self.table_open = False
         self.overlay_open = False
-        self.fig = None
-        self.ax = None
-
+        self.fig, self.ax = plt.subplots()
 
     def printReport(self):
         if self.table_open:
@@ -73,28 +76,32 @@ class GeoHTML_depr:
         self.ax.grid(b=True, which='major', color='Gainsboro', linestyle='-')
         self.ax.set_axisbelow(True)
 
+        xarange = [xrange[0],xrange[1]] # by ref obs need to be copied
+        yarange = [yrange[0],yrange[1]]
+        carange = [crange[0],crange[1]]
+
         count = len(data[geo_x])
         minX,maxX = 0,0
         minY, maxY = 0, 0
         cmin, cmax = 0, 0
         try:
-            minX, maxX = min(data[geo_x]), max(data[geo_x])
-            minY, maxY = min(data[geo_y]), max(data[geo_y])
+            minx, maxx = min(data[geo_x]), max(data[geo_x])
+            miny, maxy = min(data[geo_y]), max(data[geo_y])
             cmin, cmax = min(data[hue]), max(data[hue])
         except:
             pass
-        if xrange[0] != None:
-            minx=xrange[0]
-        if xrange[1] != None:
-            maxx=xrange[1]
-        if yrange[0] != None:
-            miny=yrange[0]
-        if yrange[1] != None:
-            maxy=yrange[1]
-        if crange[0] != None:
-            cmin=crange[0]
-        if crange[1] != None:
-            cmax=crange[1]
+        if xarange[0] != None:
+            minx=xarange[0]
+        if xarange[1] != None:
+            maxx=xarange[1]
+        if yarange[0] != None:
+            miny=yarange[0]
+        if yarange[1] != None:
+            maxy=yarange[1]
+        if carange[0] != None:
+            cmin=carange[0]
+        if carange[1] != None:
+            cmax=carange[1]
 
         if plottype == 'scatter':
             g = self.ax.scatter(data[geo_x], data[geo_y], c=data[hue], cmap=palette, edgecolor='silver', alpha=alpha, linewidth=0.5, s=20,vmin=cmin,vmax=cmax)
@@ -147,6 +154,8 @@ class GeoHTML_depr:
         self.ax.set_xlabel(geo_x + "\nCount=" + str(count))
         self.ax.set_ylabel(geo_y)
         plt.title(title)
+        plt.xlim([minx, maxx])
+        plt.ylim([miny, maxy])
         #Having plotted we now need to get the image data from the plt
         if not overlay:
             encoded = self.getPlotImage(self.fig, self.ax)
@@ -154,12 +163,19 @@ class GeoHTML_depr:
             self.HTMLIncrement()
             self.html_string += '<td width=' + str(int(100/self.cols)) + '%>' + htmlstring + '</td>\n'
 
+    def addPlotOnly(self,fig,ax):
+        encoded = self.getPlotImage(fig,ax)
+        htmlstring = '<img src="data:image/png;base64, {}">'.format(encoded.decode('utf-8')) + '\n'
+        self.HTMLIncrement()
+        self.html_string += '<td width=' + str(int(100 / self.cols)) + '%>' + htmlstring + '</td>\n'
+
     def addPlot1d(self, data,plottype, geo_x,hue='',title='',palette='crimson',overlay=False,alpha=1,xrange=[None,None],cumulative=False,density=False,bins=20):
         self.incrementOverlay(overlay)
+        axisrange = [xrange[0],xrange[1]] # by ref obs need to be copied
         if xrange[0] == None:
-            xrange[0] = min(data[geo_x])
+            axisrange[0] = min(data[geo_x])
         if xrange[1] == None:
-            xrange[1] = max(data[geo_x])
+            axisrange[1] = max(data[geo_x])
 
         if len(geo_x[0]) > 1: #todo evident bug if the x is a 1 lne stingf
             mydata = data[geo_x]
@@ -168,13 +184,13 @@ class GeoHTML_depr:
             mydata = data[geo_x]
 
         if plottype == 'histogram':
-            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density)
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=axisrange,cumulative=cumulative,density=density)
         elif plottype == 'step':
-            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='step')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=axisrange,cumulative=cumulative,density=density,histtype='step')
         elif plottype == 'stepfilled':
-            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='stepfilled')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=axisrange,cumulative=cumulative,density=density,histtype='stepfilled')
         elif plottype == 'barstacked':
-            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=xrange,cumulative=cumulative,density=density,histtype='barstacked')
+            g = plt.hist(mydata, edgecolor='k', bins=bins, color=palette, alpha=alpha, label='geo_x',range=axisrange,cumulative=cumulative,density=density,histtype='barstacked')
         elif plottype == 'violin':
             g = plt.violinplot(mydata,showmeans=False,showextrema=True,showmedians=True,quantiles=[0.25,0.75])
 
@@ -204,7 +220,8 @@ class GeoHTML_depr:
                 lastgeo = round(data.head(1)[geo].values[0],3)
                 title += '\n' + geo + ' ' + hue + ': ' + str(firstval)+ '=' + str(firstgeo) + ' ' + str(lastval) + '=' + str(lastgeo)
 
-        self.ax.set_xlabel(geo_x)
+        count = len(data[geo_x])
+        self.ax.set_xlabel(geo_x + "\nCount=" + str(count))
         plt.title(title)
         # Having plotted we now need to get the image data from the plt
         if not overlay:
@@ -466,21 +483,20 @@ class GeoHTML_depr:
         img.seek(0)
         encoded = base64.b64encode(img.getvalue())
         plt.close('all')
-        gc.collect()
         return encoded
 
     def getHeaderString(self,title, remove_strip):
         html = '<!DOCTYPE html><html lang="en"><head><title>LeucipPy Report</title>\n'
         # html += '<style> body {background-color:SeaShell;} table {table-layout:fixed;display:table;margin:0 auto;}td {border:1px solid RosyBrown;background-color:SeaShell;}</style>'
         # html += '<style> body {background-color:HoneyDew;} table {background-color:HoneyDew;} .innertable td {border:1px solid MistyRose;background-color:MintCream;}</style>'
-        html += '<style> body {text-align:center;background-color:seashell ;} img {width:95% }'
+        html += '<style> body {text-align:center;background-color:' + self.clr_background + ' ;} img {width:95% }'
         html += 'table {font-size:0.8vw;width:95%;table-layout:fixed;display:table;margin:0 auto;background-color:lightgrey ;}'
-        html += ' td {border:1px solid MistyRose;background-color:lavenderblush;}</style>'
+        html += ' td {border:1px solid ' + self.clr_behindplot + ';background-color:' + self.clr_behindplot + ';}</style>'
         html += '</head>\n'
         html += '<body>'
         if not remove_strip:
             html += '<hr/>'
-            html += '<div style="background-color:thistle;padding:10px"> LeucipPy: Protein Geometry Correlations </div>'
+            html += '<div style="background-color:' + self.clr_header + ';padding:10px"> LeucipPy: Protein Geometry Correlations </div>'
         html += '<hr/>'
         html += '<div style="background-color:lightgrey;padding:5px">'
         html += '<h1>' + title + '</h1>\n'
@@ -490,7 +506,7 @@ class GeoHTML_depr:
         return html
 
     def getFooterString(self):
-        html = '<hr/><div style = "background-color:thistle;padding:10px" >'
+        html = '<hr/><div style = "background-color:' + self.clr_header +';padding:10px" >'
         html += '<a href = "https://rachelalcraft.github.io/leucippy.html" title = "LeucipPy" target = "_self">LeucipPy</a>'
         html += ' by <a href = "mailto:rachelalcraft@gmail.com">Rachel Alcraft</a>'
         html += ' ~ supervisor <a href = "http://people.cryst.bbk.ac.uk/~ubcg66a/">Mark A Williams</a>'

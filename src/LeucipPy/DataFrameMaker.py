@@ -12,7 +12,7 @@ except:
     import GeoPdb as pdb
 
 
-class GeoDataFrame_depr:
+class DataFrameMaker:
     def __init__(self,biopython_structures,log=0):
         """Initialises a GeoDataFrame with the list of biopython structures
 

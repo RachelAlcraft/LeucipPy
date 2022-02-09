@@ -5,7 +5,7 @@ print(leu.getPdbLink('3nir'))
 
 
 # 2 ######## TEST THE DATAFRAME ##############################
-import GeoDataFrame as gdf
+import DataFrameMaker as gdf
 import Bio.PDB as bio
 import os
 from urllib.request import urlretrieve
@@ -15,12 +15,12 @@ for pdb_code in ['3nir']:
   pdb_file = 'pdb' + pdb_code + '.ent'
   struc = parser.get_structure(pdb_code,pdb_file)
   strucs.append(struc)
-geo = gdf.GeoDataFrame(strucs)
+geo = gdf.DataFrameMaker(strucs)
 df = geo.calculateGeometry(['C:O'])
 
 # 3 ####### Write an html report
-import GeoHTML as ghm
-rep = ghm.GeoHTML("Testing LeucipPy","test_leu2.html",remove_strip=False)
+import HtmlReportMaker as ghm
+rep = ghm.HtmlReportMaker("Testing LeucipPy","test_leu2.html",remove_strip=False)
 rep.addPlot1d(df,'histogram','C:O',hue='rid',title='Hist')
 rep.addPlot1d(df,'histogram','C:O',hue='aa',title='Hist')
 rep.addPlot1d(df,'histogram','C:O',hue='bfactor',title='Hist')
