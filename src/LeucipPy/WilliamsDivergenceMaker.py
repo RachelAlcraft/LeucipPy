@@ -4,10 +4,32 @@ WilliamsCoeffcientsMaker (LeucipPy.WilliamsCoeffcientsMaker)
 ------------------------------------------------------
 This class takes multiple measures and a dtaframe and calculates relative information coeffcient by convolution (Mark Williams' method)
 """
+import math
 import random
 import numpy as np
 import pandas as pd
 import scipy
+
+
+class Divergence:
+    """Class contains data results of divergence relationship
+    """
+    def __init__(self,geoA,geoB,stat,histAB,diffAB,convAB):
+        self.geoA = geoA
+        self.geoB = geoB
+        self.stat = stat
+        self.histA = []#histA
+        self.histB = []#histB
+        self.histAB = histAB
+        self.diffAB = diffAB
+        self.convAB = convAB
+        self.p_value = float('NaN')
+        self.p_hist = {'divergence':[]}
+        self.p_mean = float('NaN')
+        self.p_std = float('NaN')
+        self.p_zvalue = float('NaN')
+        self.stat2 = float('NaN')
+
 
 
 class WilliamsDivergenceMaker:
@@ -15,42 +37,38 @@ class WilliamsDivergenceMaker:
 
     """
 
-    def __init__(self,data,geos,cut_off=25,bins=10,log=0,norm=False,pval_iters=100):
+    def __init__(self,data,geos,cut_off=25,density=5,log=0,norm=False,pval_iters=100,delay_load=False):
         """Initialises Williams Coefficients with dataframe, geos and dimensions
         """
         self.data = data
         self.geos = geos
         self.log = log
-        self.bins = bins
+        self.density = density
+        self.samples = len(data.index)
+        self.bins = int(math.sqrt(self.samples/self.density))
+        self.norm = norm
         self.pval_calcs = pval_iters
         self.cut_off = cut_off
         self.correlations2d = {}
         self.correlations1d = {}
-        self.pvalues = {} #mean, sd, histogram
+        #self.pvalues = {} #mean, sd, histogram
         # init with all the cross correlation data - currently only for 2d
-        for geoA in geos:
-            if log > 0:
-                print('LeucipPy(1): WilliamsDivergenceMaker 1d init for geo=',geoA,'bins=',bins,'samples=',len(data.index))
-            self.calculateCoefficientData1D(geoA,self.cut_off,norm)
-            for geoB in geos:
-                if geoA != geoB:
-                    if log > 0:
-                        print('LeucipPy(1): WilliamsDivergenceMaker 2d init for geoA,geoB=', geoA,geoB, 'bins=', bins, 'samples=', len(data.index), 'pval iters=', pval_iters)
-                    self.calculatePairedPValues(geoA, geoB, self.cut_off, norm)
-                    self.calculateCoefficientData2D(geoA,geoB,self.cut_off,norm)
+        if not delay_load:
+            for geoA in geos:
+                self.calculateCoefficientData1D(geoA,self.cut_off,norm)
+                for geoB in geos:
+                    if geoA != geoB:
+                        self.calculateCoefficientData2D(geoA,geoB,self.cut_off,norm)
 
     def getCoefficientsDataFrame(self,as_pivot=False,fraction=1,asc=False,filter=0): #rab0
         df = {}
         df['geoA'] = []
         df['geoB'] = []
         df['stat'] = []
-        for geogeo,tpl in self.correlations2d.items():
-            geos = geogeo.split('_')
-            geoA,geoB = geos[0],geos[1]
-            stat = tpl[0]
-            df['geoA'].append(geoA)
-            df['geoB'].append(geoB)
-            df['stat'].append(stat)
+        for geogeo,div in self.correlations2d.items():
+            df['geoA'].append(div.geoA)
+            df['geoB'].append(div.geoB)
+            df['stat'].append(div.stat)
 
         dfdf = pd.DataFrame.from_dict(df)
         if filter > 0:
@@ -72,14 +90,11 @@ class WilliamsDivergenceMaker:
 
     def getRelativePlotCoefficientsDataFrame(self,geo,as_pivot=False,fraction=1,asc=False,filter=0):
         corrs = {}
-        for geogeo, tpl in self.correlations2d.items():
-            geos = geogeo.split('_')
-            print(geogeo,geos)
-            if geo in geos:
-                geoB = geos[0]
-                if geoB == geo:
-                    geoB = geos[1]
-                corrs[geoB] = tpl
+        for geogeo, div in self.correlations2d.items():
+            if geo == div.geoA:
+                corrs[div.geoB] = div
+            if geo == div.geoB:
+                corrs[div.geoA] = div
 
         #now I have a dictionary of all the correlations with geo, I want to compare them
 
@@ -89,11 +104,11 @@ class WilliamsDivergenceMaker:
         df['geoB'] = []
         df['stat'] = []
         # the tuples contain: geoB,stat,histAB,diffAB,convAB
-        for geoA,tplA in corrs.items():
-            for geoB,tplB in corrs.items():
+        for geoA,divA in corrs.items():
+            for geoB,divB in corrs.items():
                 if geoA != geoB:
-                    diffA = tplA[2]
-                    diffB = tplB[2]
+                    diffA = divA.diffAB
+                    diffB = divB.diffAB
 
                     stat = 0
                     for x in range(0, diffA.shape[0]):
@@ -119,7 +134,9 @@ class WilliamsDivergenceMaker:
             return dfdf
 
     def calculateCoefficientData2D(self,geoA,geoB,trim,norm):
-        if geoA + geoB not in self.correlations2d and geoB + geoA not in self.correlations2d:
+        if geoA+'_'+geoB not in self.correlations2d:# and geoB+'_'+geoA not in self.correlations2d: ineffiecient to do it both ways
+            if self.log > 0:
+                print('LeucipPy(1): WilliamsDivergenceMaker 2d init for geoA,geoB=', geoA, geoB, 'bins=', self.bins, 'samples=', len(self.data.index), 'pval iters=', self.pval_calcs)
             temp_df = self.data[[geoA,geoB]]
             temp_df = temp_df.sort_values(by=geoA,ascending=True)
             temp_df = temp_df.iloc[trim:,:]
@@ -130,8 +147,24 @@ class WilliamsDivergenceMaker:
             temp_df = temp_df.sort_values(by=geoB, ascending=False)
             temp_df = temp_df.iloc[trim:, :]
             stat,histAB,diffAB,convAB = self._calculateCorrelation2D(temp_df,geoA,geoB,norm)
-            p_value = self.getPValue(geoA,geoB,stat)
-            self.correlations2d[geoA+'_'+geoB] = [stat,p_value,histAB,diffAB,convAB]
+            div = Divergence(geoA,geoB,stat,histAB,diffAB,convAB)
+            #p_value = self.getPValue(geoA,geoB,stat)
+            #self.getPValueInfo(geoA,geoB)
+            #div.p
+            self.correlations2d[geoA+'_'+geoB] = div
+            #now we can calculate the paired values which will go into the same div
+            if self.pval_calcs > 0:
+                self.calculatePairedPValues(geoA, geoB, self.cut_off, norm)
+                div.p_value = self.getPValue(geoA, geoB, stat)
+                div.p_zvalue = self.getZValue(geoA,geoB,stat)
+
+#                print('###### testing ########')
+                #fifty = self.getCriticalValue(geoA,geoB,0.5)
+                #print('mean=',div.p_mean,'val=',fifty)
+                #nintyfive = self.getCriticalValue(geoA, geoB, 0.95)
+                #prob = self.getPValue(geoA, geoB, nintyfive)
+                #print(nintyfive,prob)
+
 
     def _calculateCorrelation2D(self,temp_df,geoA,geoB,norm):
         histA, binsA = np.histogram(temp_df[geoA], bins=self.bins, density=False)
@@ -167,55 +200,60 @@ class WilliamsDivergenceMaker:
         return [stat,histAB,diffAB,convAB]
 
     def calculatePairedPValues(self,geoA,geoB,trim,norm):
-        if geoA+geoB not in self.pvalues and geoB + geoA not in self.pvalues:
-            temp_df = self.data[[geoA,geoB]]
-            temp_df = temp_df.sort_values(by=geoA,ascending=True)
-            temp_df = temp_df.iloc[trim:,:]
-            temp_df = temp_df.sort_values(by=geoA, ascending=False)
-            temp_df = temp_df.iloc[trim:, :]
-            temp_df = temp_df.sort_values(by=geoB, ascending=True)
-            temp_df = temp_df.iloc[trim:, :]
-            temp_df = temp_df.sort_values(by=geoB, ascending=False)
-            temp_df = temp_df.iloc[trim:, :]
-            hist = []
-            for i in range(0,self.pval_calcs):
-                rand_df = self.randomiseData(temp_df,[geoA,geoB])
-                stat,histAB, diffAB, convAB = self._calculateCorrelation2D(rand_df, geoA, geoB, norm)
-                hist.append(stat)
-            mean = np.mean(hist)
-            sd = np.std(hist)
-            hist_dic = {}
-            hist_dic['p_value'] = hist
-            self.pvalues[geoA+'_'+geoB] = [mean,sd,hist_dic]
-
-    def calculateCoefficientData1D(self,geoA,trim,norm):
-        temp_df = self.data[[geoA]]
+        #if geoA+'_'+geoB not in self.correlations2d and geoB+'_'+geoA not in self.correlations2d:
+        temp_df = self.data[[geoA,geoB]]
         temp_df = temp_df.sort_values(by=geoA,ascending=True)
         temp_df = temp_df.iloc[trim:,:]
         temp_df = temp_df.sort_values(by=geoA, ascending=False)
         temp_df = temp_df.iloc[trim:, :]
-        histA, binsA = np.histogram(temp_df[geoA], bins=self.bins, density=False)
-        data_len = len(histA)
+        temp_df = temp_df.sort_values(by=geoB, ascending=True)
+        temp_df = temp_df.iloc[trim:, :]
+        temp_df = temp_df.sort_values(by=geoB, ascending=False)
+        temp_df = temp_df.iloc[trim:, :]
+        hist = []
+        for i in range(0,self.pval_calcs):
+            rand_df = self.randomiseData(temp_df,[geoA,geoB])
+            stat,histAB, diffAB, convAB = self._calculateCorrelation2D(rand_df, geoA, geoB, norm)
+            hist.append(stat)
+        mean = np.mean(hist)
+        sd = np.std(hist)
+        hist_dic = {}
+        hist_dic['divergence'] = hist
+        self.correlations2d[geoA+'_'+geoB].p_mean=mean
+        self.correlations2d[geoA+'_'+geoB].p_std=sd
+        self.correlations2d[geoA+'_'+geoB].p_hist=hist_dic
 
-        sum_hist = 0.0
-        for x in range(0,data_len):
-            sum_hist += float(histA[x])
+    def calculateCoefficientData1D(self,geoA,trim,norm):
+        if geoA not in self.correlations1d:
+            if self.log > 0:
+                print('LeucipPy(1): WilliamsDivergenceMaker 1d init for geo=', geoA, 'bins=', self.bins, 'samples=', len(self.data.index))
+            temp_df = self.data[[geoA]]
+            temp_df = temp_df.sort_values(by=geoA,ascending=True)
+            temp_df = temp_df.iloc[trim:,:]
+            temp_df = temp_df.sort_values(by=geoA, ascending=False)
+            temp_df = temp_df.iloc[trim:, :]
+            histA, binsA = np.histogram(temp_df[geoA], bins=self.bins, density=False)
+            data_len = len(histA)
 
-        #normalise and calc stat
-        histAA = np.zeros_like(histA, dtype=float)
-        histB = np.zeros_like(histA,dtype=float)
-        histDiff = np.zeros_like(histA,dtype=float)
-        stat = 0.0
-        for x in range(0,data_len):
-            histAA[x] = float(histA[x])/float(sum_hist)
-            histB[x] = float(1/float(data_len))
-            histDiff[x] = float(abs(histAA[x]-histB[x]))
-            stat += histDiff[x]
+            sum_hist = 0.0
+            for x in range(0,data_len):
+                sum_hist += float(histA[x])
 
-        stat = stat/2 #make it between 0 and 1
-        if norm:
-            stat = stat * 100/self.bins
-        self.correlations1d[geoA] = stat
+            #normalise and calc stat
+            histAA = np.zeros_like(histA, dtype=float)
+            histB = np.zeros_like(histA,dtype=float)
+            histDiff = np.zeros_like(histA,dtype=float)
+            stat = 0.0
+            for x in range(0,data_len):
+                histAA[x] = float(histA[x])/float(sum_hist)
+                histB[x] = float(1/float(data_len))
+                histDiff[x] = float(abs(histAA[x]-histB[x]))
+                stat += histDiff[x]
+
+            stat = stat/2 #make it between 0 and 1
+            if norm:
+                stat = stat * 100/self.bins
+            self.correlations1d[geoA] = stat
 
     def randomiseData(self,data,geos):
         dic_cut= {}
@@ -228,33 +266,34 @@ class WilliamsDivergenceMaker:
 
     def getCorrelation(self,geos):
         if len(geos) == 1:
+            self.calculateCoefficientData1D(geos[0],self.cut_off,self.norm)
             return self.correlations1d[geos[0]]
         elif len(geos) == 2:
             geo1 = geos[0]+'_'+geos[1]
-            geo2 = geos[1]+'_'+geos[0]
+            self.calculateCoefficientData2D(geos[0],geos[1],self.cut_off,self.norm)
             if geo1 in self.correlations2d:
                 return self.correlations2d[geo1]
-            if geo2 in self.correlations2d:
-                return self.correlations2d[geo2]
+
         return 0
 
-    def getPValueInfo(self,geoA,geoB):
-        geo1 = geoA+'_'+geoB
-        geo2 = geoB+'_'+geoA
-        if geo1 in self.pvalues:
-            return self.pvalues[geo1]
-        if geo2 in self.pvalues:
-            return self.pvalues[geo2]
-        return 0,1,[]
+    def getZValue(self,geoA,geoB,stat):
+        div = self.getCorrelation([geoA, geoB])
+        zvalue = (stat-div.p_mean)/div.p_std
+        return zvalue
 
     def getPValue(self,geoA,geoB,stat):
-        mean,sd,hist = self.getPValueInfo(geoA,geoB)
-        zvalue = (stat-mean)/sd
+        zvalue = self.getZValue(geoA,geoB,stat)
         #pval = NormalDist().cdf(zvalue) 3.8
-        pval = scipy.stats.norm.pdf(abs(zvalue)) #one sided
-        pval = scipy.stats.norm.pdf(abs(zvalue))*2  # two sided#
+        pval = scipy.stats.norm.cdf(abs(zvalue)) #one sided
+        #pval = scipy.stats.norm.pdf(abs(zvalue))*2  # two sided
         if pval > 0.5:
             pval = 1-pval
+        return pval
+
+    def getCriticalValue(self,geoA,geoB,prob):
+        div = self.getCorrelation([geoA, geoB])
+        zval = scipy.stats.norm.ppf(abs(prob))
+        pval = zval*div.p_std + div.p_mean
         return pval
 
 

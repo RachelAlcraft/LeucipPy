@@ -33,11 +33,11 @@ for i in range(0,5000):
 
 fake_geos =['A','B','C','D','E','F']
 df_fake = pd.DataFrame.from_dict(dic_fake)
-cm_fake = wdm.WilliamsDivergenceMaker(df_fake,fake_geos,bins=25,log=1,norm=True)
+cm_fake = wdm.WilliamsDivergenceMaker(df_fake,fake_geos,density=5,log=1,norm=False,delay_load=True)
 rep.addLineComment('Histograms')
 print('Creating histograms')
 for geo in fake_geos:
-    stat = cm_fake.correlations1d[geo]
+    stat = cm_fake.getCorrelation([geo])
     rep.addPlot1d(df_fake,'histogram',geo,hue='',bins=50,title=str(round(stat,3)))
 
 
@@ -51,13 +51,15 @@ for i in range(0,len(fake_geos)):
         if geoA != geoB:
             print('Scatter',geoA,geoB)
             df_rand = cm_fake.randomiseData(df_fake,[geoA,geoB])
-            stat,p_value,A,D,B = cm_fake.getCorrelation([geoA, geoB])
-            mean,sd,hist = cm_fake.getPValueInfo(geoA,geoB)
+            div = cm_fake.getCorrelation([geoA, geoB])
+            stat, p_value, A, D, B = div.stat,div.p_value,div.histAB,div.diffAB,div.convAB
+            mean, sd, hist = div.p_mean,div.p_std,div.p_hist
             maxV = max(np.max(A),np.max(B))
             rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p-value=' + str(round(p_value,3)))
             rep.addPlot2d(df_fake, 'scatter', title=str(round(stat,3)),geo_x=geoA, geo_y=geoB, hue=geoA)
             rep.addPlot2d(df_rand, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
-            rep.addPlot1d(hist,'histogram',geo_x='p_value',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) )
+            if len(hist['divergence']) > 0:
+                rep.addPlot1d(hist,'histogram',geo_x='divergence',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) )
             rep.addSurface(A,'Original Data',cmin=0,cmax=maxV,palette='Blues')
             rep.addSurface(D, 'Difference Data', cmin=-1*maxV, cmax=maxV, palette='RdBu')
             rep.addSurface(B, 'Convolved Data', cmin=0, cmax=maxV, palette='Reds')
@@ -68,7 +70,7 @@ strucs = bpm.loadPdbStructures([],'Data/',extension='ent',prefix='pdb')
 geo_mak = dfm.DataFrameMaker(strucs,log=0)
 geos = ['N:CA','CA:C','C:O','C:N+1','C-1:N','N:N+1','N:CA:C:N+1']
 data = geo_mak.calculateGeometry(geos)
-cm = wdm.WilliamsDivergenceMaker(data,geos,bins=10,log=1,norm=True)
+cm = wdm.WilliamsDivergenceMaker(data,geos,density=1,log=1,norm=False)
 cm.getRelativePlotCoefficientsDataFrame('N:CA')
 
 
@@ -96,7 +98,7 @@ for geo in geos:
     rep.addPlot1d(data,'histogram',geo,hue='pdb_code',bins=50,title=str(round(stat,3)))
 
 rep.addLineComment('Scatters')
-rep.changeColNumber(5)
+rep.changeColNumber(6)
 print('Creating scatters')
 for i in range(0,len(geos)):
     geoA = geos[i]
@@ -105,21 +107,17 @@ for i in range(0,len(geos)):
         if geoA != geoB:
             print('Scatter',geoA,geoB)
             df_rand = cm.randomiseData(data,[geoA,geoB])
-            stat,p_value,A,D,B = cm.getCorrelation([geoA, geoB])
+            div = cm.getCorrelation([geoA, geoB])
+            stat, p_value, A, D, B,phist = div.stat,div.p_value,div.histAB,div.diffAB,div.convAB,div.p_hist
             maxV = max(np.max(A),np.max(B))
             rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p_value=' + str(round(p_value,3)))
             rep.addPlot2d(data, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
             rep.addPlot2d(df_rand, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
+            if len(hist['divergence']) > 0:
+                rep.addPlot1d(phist,'histogram',geo_x='divergence',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) )
             rep.addSurface(A,'Original Data',cmin=0,cmax=maxV,palette='Blues')
             rep.addSurface(D, 'Difference Data', cmin=-1*maxV, cmax=maxV, palette='RdBu')
             rep.addSurface(B, 'Convolved Data', cmin=0, cmax=maxV, palette='Reds')
-
-
-
-
-
-
-
 
 
 

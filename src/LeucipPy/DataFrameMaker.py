@@ -27,7 +27,7 @@ class DataFrameMaker:
             self.bio_strucs.append(geopdb)
 
 
-    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa','id','rid','ridx','avgrid','avgridx','bfactor','avgbfactor','occupancy','info'],log=0):
+    def calculateGeometry(self,geos,hues=['pdb_code','resolution','chain','aa-1','aa','aa+1','id','rid','ridx','avgrid','avgridx','bfactor','avgbfactor','occupancy','info'],log=0):
         """Creates the geoemtry from the structures in the class
 
         :param geos: A list of geometric measures to calculate in the format 2,3 or 4 atoms for distance, angle or dihedral, e.g. 'N:CA', 'N:CA:C', or 'N:CA:C:N+1'
@@ -59,6 +59,8 @@ class DataFrameMaker:
                     num_atoms = 0
                     hue_aa = resd.amino_acid
                     tuplerow = []
+                    aam1 = ''
+                    aap1 = ''
                     refatom = None
                     if len(resd.atoms) > 0 and 'CA' in resd.atoms:
                         refatom = resd.atoms['CA']
@@ -78,6 +80,16 @@ class DataFrameMaker:
                         if ok:
                             tuplerow.append(val)
                             all_hues['info' + geo] = other
+
+                            geosaa = geo.split(':')
+                            infosaa = other.split('_')
+                            for i in range(0,len(geosaa)):
+                                geoaa = geosaa[i]
+                                if 'CA+1' == geoaa or 'N+1' == geoaa or 'C+1' == geoaa or 'O+1' == geoaa:
+                                    aap1 = infosaa[i][:3]
+                                if 'CA-1:' == geoaa or 'N-1' == geoaa or 'C-1' == geoaa or 'O-1' == geoaa:
+                                    aam1 = infosaa[i][:3]
+
                         else:
                             all_geos_ok = False
                     #Append hues
@@ -86,6 +98,8 @@ class DataFrameMaker:
                         all_hues['resolution'] =hue_res
                         all_hues['chain'] = chain
                         all_hues['aa'] =hue_aa
+                        all_hues['aa+1'] = aap1
+                        all_hues['aa-1'] = aam1
                         all_hues['avgrid'] = avg_rid/ num_atoms
                         all_hues['avgridx'] =avg_ridx/ num_atoms
                         all_hues['rid'] = rid

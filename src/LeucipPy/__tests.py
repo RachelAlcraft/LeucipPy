@@ -13,7 +13,7 @@ from urllib.request import urlretrieve
 parser = bio.PDBParser()
 strucs = []
 for pdb_code in ['3nir','1ejg','4u9h','5jsk']:
-  pdb_file = 'data/pdb' + pdb_code + '.ent'
+  pdb_file = 'Data/pdb' + pdb_code + '.ent'
   pdb_loc = ('https://www.ebi.ac.uk/pdbe/entry-files/download/pdb' + pdb_code + '.ent')
   if not os.path.exists(pdb_file):
       urlretrieve(pdb_loc, pdb_file)

@@ -12,11 +12,12 @@ from urllib.request import urlretrieve
 parser = bio.PDBParser()
 strucs = []
 for pdb_code in ['3nir']:
-  pdb_file = 'pdb' + pdb_code + '.ent'
+  pdb_file = 'Data/pdb' + pdb_code + '.ent'
   struc = parser.get_structure(pdb_code,pdb_file)
   strucs.append(struc)
 geo = gdf.DataFrameMaker(strucs)
-df = geo.calculateGeometry(['C:O'])
+df = geo.calculateGeometry(['C:O','C-1:C+1'])
+print(df[['aa+1','aa','aa-1']])
 
 # 3 ####### Write an html report
 import HtmlReportMaker as ghm
