@@ -81,8 +81,8 @@ class HtmlReportMaker:
         carange = [crange[0],crange[1]]
 
         count = len(data[geo_x])
-        minX,maxX = 0,0
-        minY, maxY = 0, 0
+        minx,maxx = 0,0
+        miny, maxy = 0, 0
         cmin, cmax = 0, 0
         try:
             minx, maxx = min(data[geo_x]), max(data[geo_x])
@@ -108,8 +108,8 @@ class HtmlReportMaker:
             cb = plt.colorbar(g)
             cb.set_label(hue)
         elif plottype == 'seaborn':
-
-            im = sns.scatterplot(x=geo_x, y=geo_y, hue=hue, data=data, alpha=alpha, legend='brief',palette=palette, edgecolor='silver', linewidth=0.5)
+            huedata = data.sort_values(by=hue, ascending=True)[hue].unique()
+            im = sns.scatterplot(x=geo_x, y=geo_y, hue=hue, data=data, alpha=alpha, legend='brief',palette=palette, edgecolor='silver', linewidth=0.5,hue_order=huedata)
             # https://stackoverflow.com/questions/53437462/how-do-i-remove-an-attribute-from-the-legend-of-a-scatter-plot
             # EXTRACT CURRENT HANDLES AND LABELS
             h, l = self.ax.get_legend_handles_labels()
@@ -119,26 +119,24 @@ class HtmlReportMaker:
             plt.gca().add_artist(col_lgd)
             self.ax.set_xlabel('')
             self.ax.set_ylabel('')
-            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)  # Put the legend out of the figure
+            plt.legend(title=hue,bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)  # Put the legend out of the figure
         elif plottype == 'hist2d':
             x = data[geo_x]
             y = data[geo_y]
             bins=100
             gridsize=50
-            hb = plt.hexbin(x, y, bins=bins, cmap=palette, gridsize=gridsize,extent=[minX,maxX,minY,maxY])
+            hb = plt.hexbin(x, y, bins=bins, cmap=palette, gridsize=gridsize,extent=[minx,maxx,miny,maxy])
         elif plottype == 'probability':
             contours = 12
             bins = 50
-            minX, maxX = min(data[geo_x]),max(data[geo_x])
-            minY, maxY = min(data[geo_y]),max(data[geo_y])
-            plt.axis([minX, maxX, minY, maxY])
-            xgrid = np.linspace(minX, maxX, bins)
-            ygrid = np.linspace(minY, maxY, bins)
+            plt.axis([minx, maxx, miny, maxy])
+            xgrid = np.linspace(minx, maxx, bins)
+            ygrid = np.linspace(miny, maxy, bins)
             xdata = data[geo_x]
             ydata = data[geo_y]
             data = np.vstack([xdata, ydata])
-            xgrid = np.linspace(minX, maxX, bins)
-            ygrid = np.linspace(minY, maxY, bins)
+            xgrid = np.linspace(minx, maxx, bins)
+            ygrid = np.linspace(miny, maxy, bins)
             Xgrid, Ygrid = np.meshgrid(xgrid, ygrid)
             grid_sized = np.vstack([Xgrid.ravel(), Ygrid.ravel()])
             # fit an array of size [Ndim, Nsamples]
@@ -148,7 +146,7 @@ class HtmlReportMaker:
             zgrid = Z.reshape(Xgrid.shape)
             self.ax.grid(True, which='major', axis='both', linestyle='-', color=(0.5, 0.5, 0.5), alpha=0.1)
             im = plt.pcolormesh(xgrid, ygrid, zgrid, shading='gouraud', cmap=palette, alpha=alpha)
-            cs = plt.contour(xgrid, ygrid, zgrid, contours, colors='0.7', linewidths=0.4, alpha=alpha,extent=[minX,maxX,minX,maxY])
+            cs = plt.contour(xgrid, ygrid, zgrid, contours, colors='0.7', linewidths=0.4, alpha=alpha,extent=[minx,maxx,miny,maxy])
             self.ax.set_axisbelow(True)
 
         self.ax.set_xlabel(geo_x + "\nCount=" + str(count))

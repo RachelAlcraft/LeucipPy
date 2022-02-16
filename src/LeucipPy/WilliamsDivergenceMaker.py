@@ -37,13 +37,14 @@ class WilliamsDivergenceMaker:
 
     """
 
-    def __init__(self,data,geos,cut_off=25,density=5,log=0,norm=False,pval_iters=100,delay_load=False):
+    def __init__(self,data,geos,cut_off=25,density=5,log=0,norm=False,pval_iters=100,delay_load=False,p_resample=True):
         """Initialises Williams Coefficients with dataframe, geos and dimensions
         """
         self.data = data
         self.geos = geos
         self.log = log
         self.density = density
+        self.p_resample = p_resample
         self.samples = len(data.index)
         self.bins = int(math.sqrt(self.samples/self.density))
         self.norm = norm
@@ -212,7 +213,10 @@ class WilliamsDivergenceMaker:
         temp_df = temp_df.iloc[trim:, :]
         hist = []
         for i in range(0,self.pval_calcs):
-            rand_df = self.randomiseData(temp_df,[geoA,geoB])
+            if self.p_resample:
+                rand_df = self.resampleData(temp_df,[geoA,geoB])
+            else:
+                rand_df = self.randomiseData(temp_df,[geoA, geoB])
             stat,histAB, diffAB, convAB = self._calculateCorrelation2D(rand_df, geoA, geoB, norm)
             hist.append(stat)
         mean = np.mean(hist)
@@ -263,6 +267,11 @@ class WilliamsDivergenceMaker:
             dic_cut[geo] = cut_data
         df_cut = pd.DataFrame.from_dict(dic_cut)
         return df_cut
+
+    def resampleData(self,data,geos):
+        datanew = data.sample(frac=1,replace=True)
+        datacut = self.randomiseData(datanew,geos)
+        return datacut
 
     def getCorrelation(self,geos):
         if len(geos) == 1:

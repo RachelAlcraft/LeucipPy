@@ -70,7 +70,7 @@ strucs = bpm.loadPdbStructures([],'Data/',extension='ent',prefix='pdb')
 geo_mak = dfm.DataFrameMaker(strucs,log=0)
 geos = ['N:CA','CA:C','C:O','C:N+1','C-1:N','N:N+1','N:CA:C:N+1']
 data = geo_mak.calculateGeometry(geos)
-cm = wdm.WilliamsDivergenceMaker(data,geos,density=1,log=1,norm=False)
+cm = wdm.WilliamsDivergenceMaker(data,geos,density=1,log=1,norm=False,p_resample=True)
 cm.getRelativePlotCoefficientsDataFrame('N:CA')
 
 
