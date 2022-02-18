@@ -5,7 +5,7 @@ import softwareproperties.ppa
 
 import WilliamsDivergenceMaker as wdm
 import BioPythonMaker as bpm
-import DataFrameMaker as dfm
+import GeometryMaker as dfm
 import HtmlReportMaker as hrm
 
 import seaborn as sns
@@ -67,7 +67,7 @@ for i in range(0,len(fake_geos)):
 ############### REAL data #######################
 rep.addLineComment('Real pdb data')
 strucs = bpm.loadPdbStructures([],'Data/',extension='ent',prefix='pdb')
-geo_mak = dfm.DataFrameMaker(strucs,log=0)
+geo_mak = dfm.GeometryMaker(strucs,log=0)
 geos = ['N:CA','CA:C','C:O','C:N+1','C-1:N','N:N+1','N:CA:C:N+1']
 data = geo_mak.calculateGeometry(geos)
 cm = wdm.WilliamsDivergenceMaker(data,geos,density=1,log=1,norm=False,p_resample=True)
@@ -107,7 +107,10 @@ for i in range(0,len(geos)):
         if geoA != geoB:
             print('Scatter',geoA,geoB)
             df_rand = cm.randomiseData(data,[geoA,geoB])
+
             div = cm.getCorrelation([geoA, geoB])
+            tpl = cm.compareCorrelations2D(data, geoA, geoB)
+
             stat, p_value, A, D, B,phist = div.stat,div.p_value,div.histAB,div.diffAB,div.convAB,div.p_hist
             maxV = max(np.max(A),np.max(B))
             rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p_value=' + str(round(p_value,3)))
@@ -121,6 +124,9 @@ for i in range(0,len(geos)):
 
 
 
+
 rep.printReport()
+
+
 
 

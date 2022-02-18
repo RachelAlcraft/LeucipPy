@@ -1,5 +1,5 @@
 
-import DataFrameMaker as gdf
+import GeometryMaker as gdf
 import Bio.PDB as bio
 import os
 from urllib.request import urlretrieve

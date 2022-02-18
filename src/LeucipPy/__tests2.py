@@ -5,7 +5,7 @@ print(leu.getPdbLink('3nir'))
 
 
 # 2 ######## TEST THE DATAFRAME ##############################
-import DataFrameMaker as gdf
+import GeometryMaker as gdf
 import Bio.PDB as bio
 import os
 from urllib.request import urlretrieve

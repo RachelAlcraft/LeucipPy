@@ -77,12 +77,15 @@ def getDihedral(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4):
     magAB = math.sqrt(ABsq)
     magBC = math.sqrt(BCsq)
 
-    cos_theta = dot / (magAB * magBC)
-    theta = math.acos(cos_theta)
-    theta_deg = (theta / 3.141592653589793238463) * 180
-    cross = crossProduct(crossAB, crossBC)
-    dotB = (cross[0] * xB) + (cross[1] * yB) + (cross[2] * zB)
-    if dotB > 0:
-        theta_deg *= -1
+    try:
+        cos_theta = dot / (magAB * magBC)
+        theta = math.acos(cos_theta)
+        theta_deg = (theta / 3.141592653589793238463) * 180
+        cross = crossProduct(crossAB, crossBC)
+        dotB = (cross[0] * xB) + (cross[1] * yB) + (cross[2] * zB)
+        if dotB > 0:
+            theta_deg *= -1
 
-    return (round(theta_deg, 3))
+        return (round(theta_deg, 3))
+    except:
+        return -180 #there is a 0 max for cos theta

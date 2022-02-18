@@ -5,7 +5,7 @@ This is a creation utility for training sets for a secondary structure classifie
 
 import pandas as pd
 import BioPythonMaker as bpm
-import DataFrameMaker as dfm
+import GeometryMaker as dfm
 import DsspMaker as dm
 
 ### INPUTS ################################

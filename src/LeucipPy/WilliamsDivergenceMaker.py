@@ -200,6 +200,52 @@ class WilliamsDivergenceMaker:
             stat = stat * 100/self.bins
         return [stat,histAB,diffAB,convAB]
 
+    def compareCorrelations2D(self,df_compare,geoA,geoB):
+
+        in_num = len(df_compare.index)
+        num = len(self.data.index)
+        if in_num > num:
+            df = df_compare.sample(frac=1, replace=True)
+            df = df.head(num)
+            if self.log > 0:
+                print('LeucipPy(1) Cut compare from',in_num,'to',num)
+        else:
+            df = df_compare
+
+        amin = min(self.data[geoA].min(),df[geoA].min())
+        amax = max(self.data[geoA].max(), df[geoA].max())
+        bmin = min(self.data[geoB].min(), df[geoB].min())
+        bmax = max(self.data[geoB].max(), df[geoB].max())
+
+        hist2Ax,xe,ye  = np.histogram2d(self.data[geoA],self.data[geoB],bins=self.bins,density=False,range=[[amin,amax],[bmin,bmax]])
+        hist2Bx,xxe,xye = np.histogram2d(df[geoA],df[geoB], bins=self.bins, density=False,range=[[amin,amax],[bmin,bmax]])
+
+        data_len = len(hist2Ax)
+        hist2A = np.zeros((data_len,data_len))
+        hist2B = np.zeros((data_len, data_len))
+        diffAB = np.zeros((data_len, data_len))
+
+        sum_histA = 0
+        sum_histB = 0
+        for x in range(0,data_len):
+            for y in range(0, data_len):
+                hist2A[x,y] = hist2Ax[y,x] #we just need to reverse this
+                hist2B[x, y] = hist2Bx[y,x]  # we just need to reverse this
+                sum_histA += hist2A[x,y]
+                sum_histB += hist2B[x,y]
+
+        #normalise and calc stat
+        stat = 0
+        for x in range(0,data_len):
+            for y in range(0, data_len):
+                hist2A[x,y] = hist2A[x,y]/sum_histA
+                hist2B[x, y] = hist2B[x, y] / sum_histB
+                diffAB[x,y] = hist2A[x,y]-hist2B[x,y]
+                stat += abs(diffAB[x,y])
+
+        stat = stat/2 #make it between 0 and 1
+        return [stat,hist2A,diffAB,hist2B]
+
     def calculatePairedPValues(self,geoA,geoB,trim,norm):
         #if geoA+'_'+geoB not in self.correlations2d and geoB+'_'+geoA not in self.correlations2d:
         temp_df = self.data[[geoA,geoB]]

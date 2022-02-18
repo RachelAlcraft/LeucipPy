@@ -23,16 +23,17 @@ class GeoPdb:
     :data chains: a dictionary of the chains which is in turn a list of residues
 
     """
-    def __init__(self,biopython_structure):
+    def __init__(self,biopython_structure,init_bioython=True,pdb_code='',residues=[]):
         """Initialises a GeoPdb with a biopython structure
 
         :param biopython_structure: A list of structures that has been created from biopython
         """
-
         self.bio_struc = biopython_structure
         self.chains = {}
-        self.createAtomsList()
-
+        if init_bioython:
+            self.createAtomsList()
+        else:
+            self.createAtomsList2(pdb_code,residues)
 
     def calculateGeometry(self,chain, resno, geo_atoms,log=0):
         """Creates the geoemtry from the structure in the class for 1 geo
@@ -257,6 +258,14 @@ class GeoPdb:
                         one_atom = atm.GeoAtom(atom_name[0],atom_name,atomNo,disordered,occupancy,bfactor,x,y,z)
                         resd.atoms[atom_name] = one_atom
                     self.chains[chain][rid] = resd
+
+
+    def createAtomsList2(self,pdb_code,residues):
+        self.resolution = 0
+        self.pdb_code = pdb_code
+        self.chains['A'] = {}
+        for res in residues:
+            self.chains['A'][res.rid] = res
 
     def elementInList(self,element, atomlist):
         for atm in atomlist:

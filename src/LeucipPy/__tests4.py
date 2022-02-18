@@ -3,7 +3,7 @@ import LeucipPy as leu
 
 
 # 2 ######## TEST FE search ##############################
-import DataFrameMaker as gdf
+import GeometryMaker as gdf
 import Bio.PDB as bio
 import os
 import BioPythonMaker as bpm

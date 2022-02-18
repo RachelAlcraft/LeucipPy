@@ -1,11 +1,11 @@
 import WilliamsDivergenceMaker as wdm
 import BioPythonMaker as bpm
-import DataFrameMaker as dfm
+import GeometryMaker as dfm
 import HtmlReportMaker as hrm
 import DsspMaker as dm
 
 strucs = bpm.loadPdbStructures([],'Data/',extension='ent',prefix='pdb',log=2)
-geo = dfm.DataFrameMaker(strucs)
+geo = dfm.GeometryMaker(strucs)
 data = geo.calculateGeometry(['N:CA'])
 dssp = dm.DsspMaker([],'Data/',extension='ent',prefix='pdb',log=2)
 geo = dssp.addDsspColumn(data)
