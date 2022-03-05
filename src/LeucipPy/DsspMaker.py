@@ -19,21 +19,22 @@ except:
 class DsspMaker:
     '''
     '''
-    def __init__(self,pdbs, directory, extension='pdb', prefix='', log=0, count=0):
+    def __init__(self,pdbs, directory, extension='pdb', prefix='', log=0, count=0,start=0):
         self.dssp_dic = {}
         struc_pdb_files = []
         if directory == '':
             directory = str(os.getcwd())
-        directory += '/'
+        if directory[-1:] != '/':
+            directory += '/'
         if log > 0:
-            print('LeucipPy(1) Loading BioPython in', directory, extension, prefix)
+            print('LeucipPy(1) Loading dssp in', directory, extension, prefix)
         parser = bio.PDBParser()
         if pdbs == []:  # Then we load all matching files in the directory
             onlyfiles = [f for f in listdir(directory) if isfile(join(directory, f))]
             length = len(onlyfiles)
             if count > 0:
-                length = min(count, length)
-            for c in range(0, length):
+                length = min(count+start, length)
+            for c in range(start, length):
                 fn = onlyfiles[c]
                 if ('.' + extension) in fn:
                     fnp = directory + fn
@@ -42,17 +43,19 @@ class DsspMaker:
                     fnnam = fnfile[len(fnfile) - 1:][0]
                     try:
                         if log > 1:
-                            print('LeucipPy(2)', fnp)
+                            print('LeucipPy(2) DSSP', str(c+1) + '/' + str(length),'-', fnp)
                         struc = parser.get_structure(fnnam, fnp)
                         struc_pdb_files.append([struc,fnnam,fnp])
                     except:
                         print('!LeuciPy BioPythonMaker:structure failed', fnp)
         else:
+            count = 0
             for pdb in pdbs:
+                count += 1
                 filename = directory + prefix + pdb + '.' + extension
                 try:
                     if log > 1:
-                        print('LeucipPy(2)', filename)
+                        print('LeucipPy(2) DSSP', str(count)+'/'+str(len(pdbs)),'-', filename)
                     struc = parser.get_structure(pdb, filename)
                     struc_pdb_files.append([struc,pdb,filename])
                 except:

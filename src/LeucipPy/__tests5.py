@@ -42,7 +42,7 @@ for geo in fake_geos:
 
 
 rep.addLineComment('Scatters')
-rep.changeColNumber(6)
+rep.changeColNumber(7)
 print('Creating scatters')
 for i in range(0,len(fake_geos)):
     geoA = fake_geos[i]
@@ -55,11 +55,12 @@ for i in range(0,len(fake_geos)):
             stat, p_value, A, D, B = div.stat,div.p_value,div.histAB,div.diffAB,div.convAB
             mean, sd, hist = div.p_mean,div.p_std,div.p_hist
             maxV = max(np.max(A),np.max(B))
-            rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p-value=' + str(round(p_value,3)))
+            rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p-value=[' + str(round(p_value,3))+','+ str(round(p_value,3))+']')
             rep.addPlot2d(df_fake, 'scatter', title=str(round(stat,3)),geo_x=geoA, geo_y=geoB, hue=geoA)
             rep.addPlot2d(df_rand, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
-            if len(hist['divergence']) > 0:
-                rep.addPlot1d(hist,'histogram',geo_x='divergence',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) )
+            if len(hist['divergence_shuffled']) > 0:
+                rep.addPlot1d(hist,'histogram',geo_x='divergence_shuffled',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) ,overlay=True,alpha=0.5)
+                rep.addPlot1d(hist, 'histogram', geo_x='divergence_resampled', title='mean=' + str(round(mean, 3)) + ' std=' + str(round(sd, 3)),alpha=0.5,palette='mediumseagreen')
             rep.addSurface(A,'Original Data',cmin=0,cmax=maxV,palette='Blues')
             rep.addSurface(D, 'Difference Data', cmin=-1*maxV, cmax=maxV, palette='RdBu')
             rep.addSurface(B, 'Convolved Data', cmin=0, cmax=maxV, palette='Reds')
@@ -116,8 +117,9 @@ for i in range(0,len(geos)):
             rep.addLineComment(geoA + ' ' + geoB + ' stat=' + str(round(stat,3)) + ' p_value=' + str(round(p_value,3)))
             rep.addPlot2d(data, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
             rep.addPlot2d(df_rand, 'scatter', geo_x=geoA, geo_y=geoB, hue=geoA)
-            if len(hist['divergence']) > 0:
-                rep.addPlot1d(phist,'histogram',geo_x='divergence',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)) )
+            if len(hist['divergence_shuffled']) > 0:
+                rep.addPlot1d(hist,'histogram',geo_x='divergence_shuffled',title='mean=' + str(round(mean,3)) + ' std=' + str(round(sd,3)),overlay=True,alpha=0.5)
+                rep.addPlot1d(hist, 'histogram', geo_x='divergence_resampled', title='mean=' + str(round(mean, 3)) + ' std=' + str(round(sd, 3)),alpha=0.5,palette='mediumseagreen')
             rep.addSurface(A,'Original Data',cmin=0,cmax=maxV,palette='Blues')
             rep.addSurface(D, 'Difference Data', cmin=-1*maxV, cmax=maxV, palette='RdBu')
             rep.addSurface(B, 'Convolved Data', cmin=0, cmax=maxV, palette='Reds')

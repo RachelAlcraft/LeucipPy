@@ -9,11 +9,12 @@ import Bio.PDB as bio
 import pandas as pd
 
 
-def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0):
+def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0,start=0):
     # First load all the pdb files in the given folder as biopython structures
     if directory == '':
         directory = str(os.getcwd())
-    directory += '/'
+    if directory[-1:] != '/':
+        directory += '/'
     if log > 0:
         print('LeucipPy(1) Loading BioPython in', directory, extension, prefix)
     parser = bio.PDBParser()
@@ -22,8 +23,8 @@ def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0):
         onlyfiles = [f for f in listdir(directory) if isfile(join(directory, f))]
         length = len(onlyfiles)
         if count > 0:
-            length = min(count,length)
-        for c in range(0, length):
+            length = min(count+start,length)
+        for c in range(start, length):
             fn = onlyfiles[c]
             if ('.' + extension) in fn:
                 fnp = directory + fn
@@ -32,17 +33,19 @@ def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0):
                 fnnam = fnfile[len(fnfile) - 1:][0]
                 try:
                     if log > 1:
-                        print('LeucipPy(2)',fnp)
+                        print('LeucipPy(2) BIO',str(c+1) + '/' + str(length),'-',fnp)
                     struc = parser.get_structure(fnnam,fnp)
                     strucs.append(struc)
                 except:
                     print('!LeuciPy BioPythonMaker:structure failed',fnp)
     else:
+        count = 0
         for pdb in pdbs:
+            count += 1
             filename = directory + prefix + pdb + '.' + extension
             try:
                 if log > 1:
-                    print('LeucipPy(2)', filename)
+                    print('LeucipPy(2) BIO', str(count)+'/'+str(len(pdbs)),'-',filename)
                 struc = parser.get_structure(pdb, filename)
                 strucs.append(struc)
             except:

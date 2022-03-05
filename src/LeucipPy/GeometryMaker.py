@@ -25,9 +25,11 @@ class GeometryMaker:
 
         self.bio_strucs = []
         if init_biopython:
+            count = 0
             for bio_struc in biopython_structures:
+                count += 1
                 if log > 0:
-                    print('LeucipPy(1): load pdb atoms: ', bio_struc.id)
+                    print('LeucipPy(1): load pdb atoms',str(count)+'/'+str(len(biopython_structures)),'-', bio_struc.id)
                 geopdb = pdb.GeoPdb(bio_struc)
                 self.bio_strucs.append(geopdb)
         else:
