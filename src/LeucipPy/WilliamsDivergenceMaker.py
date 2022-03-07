@@ -266,15 +266,35 @@ class WilliamsDivergenceMaker:
         hist_dic['divergence_shuffled'] = hist_shuffle
         hist_dic['divergence_resampled'] = hist_resamp
 
+        #p-value method 1
         v_shuf = self.getCriticalValue(hist_shuffle, 0.99)
         v_samp = self.getCriticalValue(hist_resamp, 0.01)
         inter = (v_shuf + v_samp)/2
         p_shuf = 1-self.getPValue(hist_shuffle,inter)
         p_samp = 1-self.getPValue(hist_resamp, inter)
-        #print(inter,v_shuf,v_samp,p_shuf,p_samp)
+        p_value = (p_shuf + p_samp) / (2 - (p_shuf + p_samp))
+        #self.correlations2d[geoA + '_' + geoB].p_value = p_value
 
-        p_value = (p_shuf + p_samp)/(2-(p_shuf+p_samp))
-        self.correlations2d[geoA+'_'+geoB].p_value = p_value
+        #p-value method 2
+        shuf_max = max(hist_shuffle)
+        resamp_min = min(hist_resamp)
+        count_shuf = len(hist_shuffle)
+        count_resamp = len(hist_resamp)
+        count_over = 0
+        count_under = 0
+        for hs in hist_shuffle:
+            if hs >= resamp_min:
+                count_over +=1
+        for hs in hist_resamp:
+            if hs <= shuf_max:
+                count_under +=1
+        total_area = 2 - (count_over/count_shuf + count_under/count_resamp)/2
+        under_area = (count_over/count_shuf + count_under/count_resamp)/2
+        p_value = under_area / total_area
+        self.correlations2d[geoA + '_' + geoB].p_value = p_value
+
+
+
 
         #self.correlations2d[geoA+'_'+geoB].p_mean=mean_shuffle
         #self.correlations2d[geoA+'_'+geoB].p_std=sd_shuffle
@@ -312,6 +332,35 @@ class WilliamsDivergenceMaker:
                 stat = stat * 100/self.bins
             self.correlations1d[geoA] = stat
 
+    def calculateKullbackLeibler(self,valsA,valsB):
+        minAB = min(min(valsA),min(valsB))
+        maxAB = max(max(valsA), max(valsB))
+        #print('A', valsA)
+        #print('B', valsB)
+        bins = 10
+        histA, binsA = np.histogram(valsA, bins=bins, density=False,range=[minAB,maxAB])
+        histB, binsB = np.histogram(valsB, bins=bins, density=False,range=[minAB,maxAB])
+        #print('A', histA)
+        #print('B', histB)
+        sumA = 0
+        sumB = 0
+        for i in range(bins):
+            sumA += histA[i]
+            sumB += histB[i]
+        #print('Totals=',sumA,sumB)
+
+        A_B = 0
+        B_A = 0
+        for i in range(bins):
+            pA = histA[i]/sumA
+            pB = histB[i]/sumB
+            #print(pA,pB)
+            if pA > 0 and pB > 0:
+                A_B += pA * math.log(pA/pB)
+                B_A += pB * math.log(pB/pA)
+        #print('divs=',A_B, B_A)
+        return A_B, B_A #A_B is the infotrmation gain that would be achived if A were used instead of B
+
     def randomiseData(self,data):
         dic_cut= {}
         for geo in data.columns:
@@ -328,7 +377,7 @@ class WilliamsDivergenceMaker:
 
     def getCorrelation(self,geos):
         if len(geos) == 1:
-            self.calculateCoefficientData1D(geos[0],self.cu)
+            self.calculateCoefficientData1D(geos[0])
             return self.correlations1d[geos[0]]
         elif len(geos) == 2:
             geo1 = geos[0]+'_'+geos[1]

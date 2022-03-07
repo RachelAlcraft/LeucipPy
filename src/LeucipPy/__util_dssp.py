@@ -16,7 +16,8 @@ geos = ['N:O+2','N:O+3','N:O+4','O:N+2','O:N+3','O:N+4','O:{N}+2','N:{O}+2','N:C
 tag = 'hb'
 ### System paths ########################## (Rachel's linux laptop)
 edDataPath = '/home/rachel/Documents/Bioinformatics/ProteinDataFiles/ccp4_data/'
-pdbDataPathLx =  '/home/rachel/Documents/Bioinformatics/ProteinDataFiles/pdb_data/'
+#pdbDataPathLx =  '/home/rachel/Documents/Bioinformatics/ProteinDataFiles/pdb_data/'
+pdbDataPathLx =  'PdbData/'
 outList = dsspPrintPath + 'SSTrainingSet_' + tag + '.csv'
 ### Get pdb list #################################
 pdbdata = pd.read_csv(pdbListPath)
@@ -26,13 +27,16 @@ pdblist.sort()
 pdblist = pdblist[:10]
 
 ### Load structures ######################
-strucs = bpm.loadPdbStructures(pdblist,pdbDataPathLx,extension='ent',prefix='pdb',log=1)
-geo = dfm.DataFrameMaker(strucs)
+#strucs = bpm.loadPdbStructures(pdblist,pdbDataPathLx,extension='ent',prefix='pdb',log=1)
+strucs = bpm.loadPdbStructures([],'PdbData/',extension='ent',prefix='pdb')
+geo = dfm.GeometryMaker(strucs)
 data = geo.calculateGeometry(geos)
+print(data)
 
 ### add DSSP ######################
 dssp = dm.DsspMaker(pdblist,pdbDataPathLx,extension='ent',prefix='pdb',log=1)
 data = dssp.addDsspColumn(data)
+print(data)
 
 ### Clean it into something for the training set ######################
 cols = ['dssp','aa']
