@@ -64,13 +64,14 @@ class DsspMaker:
         from Bio.PDB.DSSP import DSSP
         for structure,pdb,filename in struc_pdb_files:
             model = structure[0]
-            dssp = DSSP(model, filename)
+            dssp = DSSP(model, filename,dssp='$usr/bin/dssp')
             for akey in list(dssp.keys()):
                 chain = akey[0]
                 res_no = akey[1][1]
                 row = dssp[akey]
                 ss = row[2]
                 self.dssp_dic[pdb+chain+str(res_no)] = ss
+                print(ss)
 
     def addDsspColumn(self,data,pdb_col = 'pdb_code',chain_col = 'chain',res_col = 'rid',col_name = 'dssp'):
         dssp_col = []
