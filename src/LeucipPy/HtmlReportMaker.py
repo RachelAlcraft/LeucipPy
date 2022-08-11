@@ -418,10 +418,10 @@ class HtmlReportMaker:
         if style=='filled':
             cf = self.ax.contourf(X,Y,Z,cmap=palette,levels=levels,alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
         elif style == 'lines':
-            cf = self.ax.contour(X, Y, Z, cmap=palette, levels=levels, alpha=alpha,vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
+            cf = self.ax.contour(X, Y, Z, cmap=palette,levels=levels, alpha=alpha,vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
         else:
-            cf = self.ax.contourf(X, Y, Z, cmap=palette, alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
-            cf2 = self.ax.contour(X, Y, Z, colors='black', vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
+            cf = self.ax.contourf(X, Y, Z, cmap=palette,levels=levels,alpha=alpha,vmin=vmin,vmax=vmax,extend='both')
+            cf2 = self.ax.contour(X, Y, Z, colors='black',levels=levels,vmin=vmin,vmax=vmax,extend='both',linewidths=linewidth)
 
         if contourlabel:
             if style=='both':

@@ -1,0 +1,22 @@
+
+https://packaging.python.org/tutorials/packaging-projects/
+
+1) In the directory /home/rachel/Documents/Bioinformatics/LeucipPy/ open a command prompt
+ (or from WSL and VSCODE on the command prompt there)
+2) Increment the version in setup.cfg in the project
+3) cmd: python3 -m build
+4) cmd: python3 -m twine upload --repository testpypi dist/*
+user name promt RachelAlcraft
+password prompt K!dbr00ke
+
+(
+    unless it needs reauthenticating in which case you go to testpypi
+https://test.pypi.org/project/LeucipPy-pkg-RachelAlcraft/
+get a new token
+and paste it in when it asks for the password
+)
+
+To check all is well upgrade and check the colab:
+https://colab.research.google.com/drive/1Ut5HXQQgE3sNuAMo7IVR3aqwUVOYDy12
+
+
