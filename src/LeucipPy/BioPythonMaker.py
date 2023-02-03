@@ -17,7 +17,7 @@ try:
 except:
     import GeometryMaker as gm
     
-def loadPdbStructures_loop(onlyfiles,directory,log,length,j,chunk,geos):    
+def loadPdbStructures_loop(onlyfiles,directory,log,length,j,chunk,geos,exc_hetatm):    
     #https://stackoverflow.com/questions/9786102/how-do-i-parallelize-a-simple-python-loop
     parser = bio.PDBParser()
     rets = []
@@ -35,7 +35,7 @@ def loadPdbStructures_loop(onlyfiles,directory,log,length,j,chunk,geos):
                     print('LeucipPy(2) BIO',str(i+1) + '/' + str(length),'-',fnp)
                 struc = parser.get_structure(fnnam,fnp)        
                 if geos != []:
-                    geo = gm.GeometryMaker([struc], log=0)
+                    geo = gm.GeometryMaker([struc], log=0,exc_hetatm=exc_hetatm)
                     data = geo.calculateGeometry(geos, log=0)
                     rets.append(data)
                 else:
@@ -45,7 +45,7 @@ def loadPdbStructures_loop(onlyfiles,directory,log,length,j,chunk,geos):
     return rets
     
     
-def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0,start=0,jobs=1,geos=[]):
+def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0,start=0,jobs=1,geos=[],exc_hetatm=True):
     # First load all the pdb files in the given folder as biopython structures
     if directory == '':
         directory = str(os.getcwd())
@@ -69,7 +69,7 @@ def loadPdbStructures(pdbs,directory,extension='pdb',prefix='',log=0,count=0,sta
         length = min(count+start,length)
     #if jobs > 1:        
     chunk = 10
-    strucs = Parallel(n_jobs=jobs)(delayed(loadPdbStructures_loop)(onlyfiles,directory,log,length,i,chunk,geos) for i in range(start,length,chunk))
+    strucs = Parallel(n_jobs=jobs)(delayed(loadPdbStructures_loop)(onlyfiles,directory,log,length,i,chunk,geos,exc_hetatm) for i in range(start,length,chunk))
     structs = []
     for st in strucs:
         for s in st:

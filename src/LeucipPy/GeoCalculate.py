@@ -17,6 +17,8 @@ def getDistance(x1, y1, z1, x2, y2, z2):
     zd = float(z2) - float(z1)
     sumsqu = (xd * xd) + (yd * yd) + (zd * zd)
     mag = math.sqrt(sumsqu)
+    #if mag > 10:
+    #    print("mag",mag)
     return (mag)
 
 def getAngle(x1, y1, z1, x2, y2, z2, x3, y3, z3):

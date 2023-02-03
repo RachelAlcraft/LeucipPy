@@ -17,7 +17,7 @@ except:
 
 
 class GeometryMaker:
-    def __init__(self,biopython_structures,log=0,init_biopython=True,atoms_data=pd.DataFrame()):
+    def __init__(self,biopython_structures,log=0,init_biopython=True,atoms_data=pd.DataFrame(),exc_hetatm=True):
         """Initialises a GeoDataFrame with the list of biopython structures
 
         :param biopython_structures: A list of structures that has been created from biopython
@@ -30,7 +30,7 @@ class GeometryMaker:
                 count += 1
                 if log > 0:
                     print('LeucipPy(1): load pdb atoms',str(count)+'/'+str(len(biopython_structures)),'-', bio_struc.id)
-                geopdb = pdb.GeoPdb(bio_struc)
+                geopdb = pdb.GeoPdb(bio_struc,exc_hetatm=exc_hetatm)
                 self.bio_strucs.append(geopdb)
         else:
             print('Then we init from a dataframe of atoms instead to match up with our synthetic geometry format')

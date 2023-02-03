@@ -23,12 +23,13 @@ class GeoPdb:
     :data chains: a dictionary of the chains which is in turn a list of residues
 
     """
-    def __init__(self,biopython_structure,init_bioython=True,pdb_code='',residues=[]):
+    def __init__(self,biopython_structure,init_bioython=True,pdb_code='',residues=[],exc_hetatm=True):
         """Initialises a GeoPdb with a biopython structure
 
         :param biopython_structure: A list of structures that has been created from biopython
         """
         self.bio_struc = biopython_structure
+        self.exc_hetatm=exc_hetatm
         self.chains = {}
         if init_bioython:
             self.createAtomsList()
@@ -226,6 +227,7 @@ class GeoPdb:
         self.pdb_code = self.bio_struc.id
         atomNo = 0
         ridx = 0
+        last_bad = ""
         for model in self.bio_struc:
             for chain in model:
                 self.chains[chain.id] = {} ####  a chain is a dictionary of residue number to GeoResidue ############################################################
@@ -235,30 +237,53 @@ class GeoPdb:
                     resd = res.GeoResidue(aa,rid,ridx)
                     chain = residue.get_full_id()[2]
                     hetatm = residue.get_full_id()[3][0]
-                    ridx = ridx + 1
+                    aah = residue.get_full_id()
+                    mutation = aah[3][2]                                                                                
+                    #if rid == 59: #debug line
+                    #    print(rid)
+                    this_bad = chain + "_" + str(rid)
+                    if this_bad != last_bad:                                    
+                        if rid in self.chains[chain] and self.exc_hetatm:                          
+                            # if it is already there something is wrong so lets remove it
+                            del self.chains[chain][rid]
+                        elif mutation[0] != " " and self.exc_hetatm:                          
+                            # if there are mutation insertions they cause us geoemtry problems and we will remove them                        
+                            last_bad = chain + "_" + str(rid)
+                            if rid in self.chains[chain]: #we know this has alreadybeen checked, it is just a line of code to stop it adding
+                                del self.chains[chain][rid]
+                        else:
+                        
+                            if str(hetatm[0:2]) == "H_" and self.exc_hetatm:
+                                if False:
+                                    print("HETATM",rid)
+                            else:
+                                # only proceed if we explicitly want hetatms                        
+                                ridx = ridx + 1
 
-                    for atom in residue:
-                        disordered = 'N'
-                        if atom.is_disordered():
-                            disordered = 'Y'
-                            if atom.disordered_has_id("A"):
-                                atom.disordered_select("A")
-                        if atom.get_occupancy() < 1:
-                            disordered = 'Y'
-                        atomNo += 1
-                        atom_name = atom.get_name()
-                        occupant = atom.get_full_id()[4][1]
-                        if occupant == ' ':
-                            occupant = 'A'
-                        x = atom.get_vector()[0]
-                        y = atom.get_vector()[1]
-                        z = atom.get_vector()[2]
-                        bfactor = atom.get_bfactor()
-                        occupancy = atom.get_occupancy()
-                        one_atom = atm.GeoAtom(atom_name[0],atom_name,atomNo,disordered,occupancy,bfactor,x,y,z)
-                        resd.atoms[atom_name] = one_atom
-                    self.chains[chain][rid] = resd
-
+                                for atom in residue:
+                                    disordered = 'N'
+                                    if atom.is_disordered():
+                                        disordered = 'Y'
+                                        if atom.disordered_has_id("A"):
+                                            atom.disordered_select("A")
+                                    if atom.get_occupancy() < 1:
+                                        disordered = 'Y'
+                                    atomNo += 1
+                                    atom_name = atom.get_name()
+                                    occupant = atom.get_full_id()[4][1]
+                                    if occupant == ' ':
+                                        occupant = 'A'
+                                    x = atom.get_vector()[0]
+                                    y = atom.get_vector()[1]
+                                    z = atom.get_vector()[2]
+                                    bfactor = atom.get_bfactor()
+                                    occupancy = atom.get_occupancy()
+                                    one_atom = atm.GeoAtom(atom_name[0],atom_name,atomNo,disordered,occupancy,bfactor,x,y,z)
+                                    resd.atoms[atom_name] = one_atom
+                                self.chains[chain][rid] = resd
+                                last_bad = ""
+                
+                            
 
     def createAtomsList2(self,pdb_code,residues):
         self.resolution = 0
